@@ -53,6 +53,7 @@
 /* } Div2-SW2-BSP-FBX-LEDS */
 #include <linux/input/cy8c_ts.h>
 #include <linux/msm_adc.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -1391,6 +1392,9 @@ struct resource msm_camera_resources[] = {
 		.end	= INT_VFE,
 		.flags	= IORESOURCE_IRQ,
 	},
+	{
+		.flags  = IORESOURCE_DMA,
+	}
 };
 
 struct msm_camera_device_platform_data msm_camera_device_data = {
@@ -1463,6 +1467,8 @@ static struct msm_camera_sensor_info msm_camera_sensor_mt9p111_data = {
     .flash_main_waittime = 0,
     .flash_main_starttime = 0,
     .flash_second_waittime = 0,
+    .preflash_light = 0x31,//Div2-SW6-MM-CL-FB3LED-00+
+    .torch_light = 0x34,//Div2-SW6-MM-CL-FB3LED-00+
     //SW5-Multimedia-TH-FlashModeSetting-01+}
 
     //SW5-Multimedia-TH-MT9P111ReAFTest-00+{
@@ -1588,6 +1594,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_tcm9001md_data = {
 	.sensor_name    = "tcm9001md",
 	.sensor_reset   = 19,
 	.sensor_pwd     = 0,
+	.sensor_Orientation = MSM_CAMERA_SENSOR_ORIENTATION_0,
 	.pdata          = &msm_camera_device_data,
 	.resource       = msm_camera_resources,
 	.num_resources  = ARRAY_SIZE(msm_camera_resources),
@@ -1953,6 +1960,11 @@ void camera_sensor_hwpin_init(void)
             msm_camera_sensor_mt9p111_data.flash_main_starttime = 90;
             msm_camera_sensor_mt9p111_data.flash_main_waittime = 700;
         }
+        if(pid ==Product_FB3 )//Div2-SW6-MM-CL-FB3LED-00+
+        {
+            msm_camera_sensor_mt9p111_data.torch_light = 0x3E;//Div2-SW6-MM-CL-FB3LED-01*
+            msm_camera_sensor_mt9p111_data.preflash_light=0x3E;
+        }
     }
 
 #endif
@@ -2014,6 +2026,7 @@ void camera_sensor_hwpin_init(void)
             msm_camera_sensor_hm0357_data.vga_pwdn_pin = 174;
         }
         
+        msm_camera_sensor_hm0357_data.sensor_Orientation = MSM_CAMERA_SENSOR_ORIENTATION_270,//Div2-SW6-MM-MC-Hm0357Orientation-00+
         msm_camera_sensor_hm0357_data.pwdn_pin = 2;
         msm_camera_sensor_hm0357_data.mclk_sw_pin = 0xffff;
 
@@ -2031,6 +2044,13 @@ void camera_sensor_hwpin_init(void)
         msm_camera_sensor_hm0357_data.cam_vreg_vddio_id = "gp7";
         msm_camera_sensor_hm0357_data.cam_vreg_acore_id = "gp10";
     }
+    else if (pid == Product_SF5)//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00+{
+    {
+        msm_camera_sensor_hm0357_data.rst_pin = 120;
+        msm_camera_sensor_hm0357_data.pwdn_pin = 2;
+        msm_camera_sensor_hm0357_data.vga_pwdn_pin = 0;
+        msm_camera_sensor_hm0357_data.vga_power_en_pin = 98;
+    }//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00+}
     else// For FBx and FDx series project
     {
         msm_camera_sensor_hm0357_data.rst_pin = 1;

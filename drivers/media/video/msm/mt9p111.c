@@ -54,6 +54,7 @@ static int mt9p111_rectangle_y=0;
 static int mt9p111_rectangle_w=0;
 static int mt9p111_rectangle_h=0;
 static int mt9p111_CAF_mode=0;
+static int mt9p111_af_mode = -1;
 
 static pid_t mt9p111_thread_id;
 struct hrtimer mt9p111_flashled_timer;
@@ -86,6 +87,7 @@ static uint16_t flash_target_addr_val = 0;
 #define mt9p111_FRAME_WIDTH  640
 #define mt9p111_FRAME_HEIGHT  480
 static int mt9p111_init_done=0;
+static int mt9p111_reset_count=0;//Div2-SW6-MM-CL-mt9p111noImage-01+
 static int mt9p111_snapshoted=0;
 static int mt9p111_vreg_acore=0;
 static int mt9p111_vreg_vddio=0;
@@ -314,7 +316,8 @@ static unsigned int mt9p111_supported_ISO[] = {
 
 static unsigned int mt9p111_supported_focus[] = {
     AF_MODE_AUTO,
-    AF_MODE_NORMAL
+    AF_MODE_NORMAL,
+    AF_MODE_MACRO
 };
 static unsigned int mt9p111_supported_lensshade[] = {
     FALSE
@@ -325,7 +328,7 @@ static unsigned int mt9p111_supported_scenemode[] = {
 };
 
 static unsigned int mt9p111_supported_continuous_af[] = {
-    //TRUE,
+    TRUE,
     FALSE
 };
 
@@ -958,6 +961,7 @@ static long mt9p111_reg_init2(void)
     int pid = 0;
     pid = fih_get_product_id();
     product_phase = fih_get_product_phase();
+    printk("mt9p111_reg_init2 pid = 0x%x\n", pid);
 
     // ======================================================
     /* Lens Correction Setting */
@@ -1028,8 +1032,11 @@ static long mt9p111_reg_init2(void)
                     return rc;
                 // added by mcnex
                 msleep(100);
-                if (useDNPforOTP != 0x5100) // 0x5100 means OTP light source is DNP
-                    mt9p111_dynPGA_init();
+                if(pid!=Product_FB3)//Div2-SW6-CL-Camera-LensC-02
+                {
+                    if (useDNPforOTP != 0x5100) // 0x5100 means OTP light source is DNP
+                        mt9p111_dynPGA_init();
+                }
             }
         }
     }
@@ -1242,7 +1249,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
 
     switch (brightness) 
     {
-        case CAMERA_BRIGHTNESS_LV0: //[EV 0]
+        case CAMERA_BRIGHTNESS_0: //[EV 0]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br0_tbl[0], mt9p111_regs.br0_tbl_size);
             if (rc < 0)
@@ -1250,7 +1257,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
         }
             break;
 
-        case CAMERA_BRIGHTNESS_LV1: //[EV 1]
+        case CAMERA_BRIGHTNESS_1: //[EV 1]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br1_tbl[0], mt9p111_regs.br1_tbl_size);
             if (rc < 0)
@@ -1258,7 +1265,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
         }
             break;
 
-        case CAMERA_BRIGHTNESS_LV2: //[EV 2]
+        case CAMERA_BRIGHTNESS_2: //[EV 2]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br2_tbl[0], mt9p111_regs.br2_tbl_size);
             if (rc < 0)
@@ -1266,7 +1273,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
         }
             break;
 
-        case CAMERA_BRIGHTNESS_LV3: //[EV 3 (default)]
+        case CAMERA_BRIGHTNESS_3: //[EV 3 (default)]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br3_tbl[0], mt9p111_regs.br3_tbl_size);
             if (rc < 0)
@@ -1274,7 +1281,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
         }
             break;
 
-        case CAMERA_BRIGHTNESS_LV4: //[EV 4]
+        case CAMERA_BRIGHTNESS_4: //[EV 4]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br4_tbl[0], mt9p111_regs.br4_tbl_size);
             if (rc < 0)
@@ -1282,7 +1289,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
         }
             break;
 
-        case CAMERA_BRIGHTNESS_LV5: //[EV 5]
+        case CAMERA_BRIGHTNESS_5: //[EV 5]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br5_tbl[0], mt9p111_regs.br5_tbl_size);
             if (rc < 0)
@@ -1290,7 +1297,7 @@ static long mt9p111_set_brightness(int mode, int brightness)
         }
             break;
 
-        case CAMERA_BRIGHTNESS_LV6: //[EV +3]
+        case CAMERA_BRIGHTNESS_6: //[EV +3]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.br6_tbl[0], mt9p111_regs.br6_tbl_size);
             if (rc < 0)
@@ -1339,7 +1346,7 @@ static long mt9p111_set_contrast(int mode, int contrast)
 
     switch (contrast)
     {
-        case CAMERA_CONTRAST_LV1: //[Const -2]
+        case CAMERA_CONTRAST_MINUS2: //[Const -2]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.const_m2_tbl[0], mt9p111_regs.const_m2_tbl_size);
             if (rc < 0)
@@ -1347,7 +1354,7 @@ static long mt9p111_set_contrast(int mode, int contrast)
         }
             break;
 
-        case CAMERA_CONTRAST_LV3: //[Const -1]
+        case CAMERA_CONTRAST_MINUS1: //[Const -1]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.const_m1_tbl[0], mt9p111_regs.const_m1_tbl_size);
             if (rc < 0)
@@ -1355,7 +1362,7 @@ static long mt9p111_set_contrast(int mode, int contrast)
         }
             break;
 
-        case CAMERA_CONTRAST_LV5: //[Const 0 (default)]
+        case CAMERA_CONTRAST_ZERO: //[Const 0 (default)]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.const_zero_tbl[0], mt9p111_regs.const_zero_tbl_size);
             if (rc < 0)
@@ -1363,7 +1370,7 @@ static long mt9p111_set_contrast(int mode, int contrast)
         }
             break;
 
-        case CAMERA_CONTRAST_LV7: //[Const +1]
+        case CAMERA_CONTRAST_POSITIVE1: //[Const +1]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.const_p1_tbl[0], mt9p111_regs.const_p1_tbl_size);
             if (rc < 0)
@@ -1371,7 +1378,7 @@ static long mt9p111_set_contrast(int mode, int contrast)
         }
             break;
 
-        case CAMERA_CONTRAST_LV9: //[Const +2]
+        case CAMERA_CONTRAST_POSITIVE2: //[Const +2]
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.const_p2_tbl[0], mt9p111_regs.const_p2_tbl_size);
             if (rc < 0)
@@ -1591,7 +1598,7 @@ static long mt9p111_set_saturation(int mode, int satu)
 
     switch (satu) 
     {
-        case CAMERA_SATURATION_LV0:
+        case CAMERA_SATURATION_MINUS2:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.satu_m2_tbl[0], mt9p111_regs.satu_m2_tbl_size);
             if (rc < 0)
@@ -1599,7 +1606,7 @@ static long mt9p111_set_saturation(int mode, int satu)
         }
             break;
 
-        case CAMERA_SATURATION_LV2:
+        case CAMERA_SATURATION_MINUS1:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.satu_m1_tbl[0], mt9p111_regs.satu_m1_tbl_size);
             if (rc < 0)
@@ -1607,7 +1614,7 @@ static long mt9p111_set_saturation(int mode, int satu)
         }
             break;
 
-        case CAMERA_SATURATION_LV4:
+        case CAMERA_SATURATION_ZERO:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.satu_zero_tbl[0], mt9p111_regs.satu_zero_tbl_size);
             if (rc < 0)
@@ -1615,7 +1622,7 @@ static long mt9p111_set_saturation(int mode, int satu)
         }
             break;
 
-        case CAMERA_SATURATION_LV6:
+        case CAMERA_SATURATION_POSITIVE1:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.satu_p1_tbl[0], mt9p111_regs.satu_p1_tbl_size);
             if (rc < 0)
@@ -1623,7 +1630,7 @@ static long mt9p111_set_saturation(int mode, int satu)
         }
             break;
 
-        case CAMERA_SATURATION_LV8:
+        case CAMERA_SATURATION_POSITIVE2:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.satu_p2_tbl[0], mt9p111_regs.satu_p2_tbl_size);
             if (rc < 0)
@@ -1673,7 +1680,7 @@ static long mt9p111_set_sharpness(int mode, int sharpness)
 
     switch (sharpness) 
     {
-        case CAMERA_SHARPNESS_LV1:
+        case CAMERA_SHARPNESS_MINUS2:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.sharp_m2_tbl[0], mt9p111_regs.sharp_m2_tbl_size);
             if (rc < 0)
@@ -1681,7 +1688,7 @@ static long mt9p111_set_sharpness(int mode, int sharpness)
         }
             break;
 
-        case CAMERA_SHARPNESS_LV3:
+        case CAMERA_SHARPNESS_MINUS1:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.sharp_m1_tbl[0], mt9p111_regs.sharp_m1_tbl_size);
             if (rc < 0)
@@ -1689,7 +1696,7 @@ static long mt9p111_set_sharpness(int mode, int sharpness)
         }
             break;
 
-        case CAMERA_SHARPNESS_LV5:
+        case CAMERA_SHARPNESS_ZERO:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.sharp_zero_tbl[0], mt9p111_regs.sharp_zero_tbl_size);
             if (rc < 0)
@@ -1697,7 +1704,7 @@ static long mt9p111_set_sharpness(int mode, int sharpness)
         }
             break;
 
-        case CAMERA_SHARPNESS_LV7:
+        case CAMERA_SHARPNESS_POSITIVE1:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.sharp_p1_tbl[0], mt9p111_regs.sharp_p1_tbl_size);
             if (rc < 0)
@@ -1705,7 +1712,7 @@ static long mt9p111_set_sharpness(int mode, int sharpness)
         }
             break;
 
-        case CAMERA_SHARPNESS_LV9:
+        case CAMERA_SHARPNESS_POSITIVE2:
         {
             rc = mt9p111_i2c_write_table(&mt9p111_regs.sharp_p2_tbl[0], mt9p111_regs.sharp_p2_tbl_size);
             if (rc < 0)
@@ -1829,7 +1836,7 @@ static long mt9p111_set_ledmod(int mode, int ledmod)
 
 #ifdef CONFIG_FIH_AAT1272
             //Write Reg 1 with 0x33 to let AAT1272 enter into Movie mode and flash with default brightness
-            rc = aat1272_i2c_write(aat1272_client->addr, 0x01, 0x34, AAT1272_LEN);//SW2-6--CL-Camera-flashmode-01*
+            rc = aat1272_i2c_write(aat1272_client->addr, 0x01, mt9p111info->torch_light, AAT1272_LEN);//SW2-6--CL-Camera-flashmode-01*//Div2-SW6-MM-CL-FB3LED-00+
 #endif
 #endif
 //Div2-SW6-MM-MC-AddFitiFp6773FlashLed-00*}
@@ -1896,6 +1903,15 @@ static int mt9p111_flashled_off_thread(void *arg)
             mdelay(mt9p111info->flash_main_waittime);
             rc = fih_cam_output_gpio_control(mt9p111info->GPIO_FLASHLED, FLASHLED_ID, 0);
         }
+        else if(pid==Product_FB3)//Div2-SW6-MM-CL-FB3LED-00+
+        {
+            rc = fih_cam_output_gpio_control(mt9p111info->GPIO_FLASHLED_DRV_EN, FLASHLED_ID, 1);
+            rc = aat1272_i2c_write(aat1272_client->addr, 0x01, 0x3A, AAT1272_LEN);
+            if (rc < 0)
+                return rc;
+
+            mdelay(mt9p111info->flash_main_waittime);
+        }
         else
         {
             //Write Reg 1 with 0x33 to let AAT1272 enter into Movie mode and flash with default brightness
@@ -1923,6 +1939,7 @@ static long mt9p111_set_CAF(int mode,int CAF)
     long rc = 0;
     uint16_t seq_state = 0;
     uint16_t retry_count=0;
+    uint16_t f_state = 0;
 
     if(mt9p111_CAF_mode == CAF)
     {
@@ -1957,8 +1974,38 @@ static long mt9p111_set_CAF(int mode,int CAF)
             pm8058_gpio_config(mt9p111info->AF_pmic_en_pin, &af_en);
         mt9p111_i2c_write(mt9p111_client->addr, 0x098E, 0x8419, WORD_LEN);
         mt9p111_i2c_write(mt9p111_client->addr, 0x8419, 0x03, BYTE_LEN);
-        mt9p111_i2c_write(mt9p111_client->addr, 0xB004, 0x10, BYTE_LEN);
+        //mt9p111_i2c_write(mt9p111_client->addr, 0xB004, 0x10, BYTE_LEN);
         mt9p111_i2c_write(mt9p111_client->addr, 0x8404, 0x06, BYTE_LEN);
+
+        msleep(150);
+        rc = mt9p111_i2c_read(mt9p111_client->addr, 0x8405, &seq_state, BYTE_LEN);
+        printk("mt9p111  seq_state = 0x%x\n", seq_state);
+
+        if((seq_state != 0x03)&&(seq_state != 0x07))
+        {
+            do 
+            {
+                msleep(30);
+                rc = mt9p111_i2c_read(mt9p111_client->addr, 0x8405, &seq_state, BYTE_LEN);
+                printk("mt9p111  seq_state = 0x%x\n", seq_state);
+                retry_count++;
+            } 
+            while(((seq_state != 0x03)&&(seq_state != 0x07))&&(retry_count<50));
+        }
+
+        rc = mt9p111_i2c_write_table(&mt9p111_regs.aftrigger_tbl[0], mt9p111_regs.aftrigger_tbl_size);
+        do 
+        {
+            msleep(100);
+
+            rc = mt9p111_i2c_read(mt9p111_client->addr, 0xB006, &f_state, BYTE_LEN);
+            if (rc < 0)
+                return rc;
+
+            printk("mt9p111_set_autofocus_state = 0x%x\n", f_state);
+            retry_count++;
+        } while((f_state != 0x00)&&(retry_count<50));
+        
     }
     else if (mt9p111_CAF_mode==0)
     {
@@ -1966,9 +2013,10 @@ static long mt9p111_set_CAF(int mode,int CAF)
                 pm8058_gpio_config(mt9p111info->AF_pmic_en_pin, &af_dis);
         mt9p111_i2c_write(mt9p111_client->addr, 0x098E, 0x8419, WORD_LEN);
         mt9p111_i2c_write(mt9p111_client->addr, 0x8419, 0x05, BYTE_LEN);
-        mt9p111_i2c_write(mt9p111_client->addr, 0xB004, 0x02, BYTE_LEN);
+        //mt9p111_i2c_write(mt9p111_client->addr, 0xB004, 0x02, BYTE_LEN);
         mt9p111_i2c_write(mt9p111_client->addr, 0x8404, 0x06, BYTE_LEN);
     } 
+    printk("mt9p111_set_CAF X \n");
 
     return rc;
 }
@@ -1976,15 +2024,16 @@ static long mt9p111_set_CAF(int mode,int CAF)
 static long mt9p111_set_autofocus(int mode,int focus_set)
 {
     long rc = 0;
-    uint16_t f_state = 0;
-    uint16_t retry_count=0;
+    //uint16_t f_state = 0;//Div2-SW6-MM-CL-CancelAF-00-
+    //uint16_t retry_count=0;//Div2-SW6-MM-CL-CancelAF-00-
+    int pid = 0;
+
 //SW5-Multimedia-TH-MT9P111ReAFTest-00+{
 #ifdef CONFIG_MT9P111_FAST_AF_SPECIAL_CONDITION
     uint16_t AF_Mode = 0;
-    uint16_t Poll_R0xB000_val = 0;
-    uint16_t AF_Brightness = 0;
 #endif
 //SW5-Multimedia-TH-MT9P111ReAFTest-00+}
+    pid = fih_get_product_id();
 
     printk("mt9p111_set_autofocus set=%d\n",focus_set);
     if(focus_set==1)
@@ -2012,7 +2061,19 @@ static long mt9p111_set_autofocus(int mode,int focus_set)
         }
 #endif
 //SW5-Multimedia-TH-MT9P111ReAFTest-00+}
-    
+//Div2-SW6-MM-CL-FB3LED-00+{
+        if(pid==Product_FB3)
+        {
+            rc = mt9p111_i2c_read(mt9p111_client->addr, mt9p111info->flash_target_addr, &flash_target_addr_val, WORD_LEN);
+            if(((mt9p111_m_ledmod==2) ||(mt9p111_m_ledmod == 1))&& (flash_target_addr_val>=0x7AA))
+            {
+                rc = fih_cam_output_gpio_control(mt9p111info->GPIO_FLASHLED_DRV_EN, FLASHLED_ID, 1);
+                #ifdef CONFIG_FIH_AAT1272
+                rc = aat1272_i2c_write(aat1272_client->addr, 0x01, 0x3E, AAT1272_LEN);
+                #endif
+            }
+        }
+//Div2-SW6-MM-CL-FB3LED-00+}
         if(mt9p111info->AF_pmic_en_pin!=0xffff)
             pm8058_gpio_config(mt9p111info->AF_pmic_en_pin, &af_en);
 
@@ -2027,7 +2088,7 @@ static long mt9p111_set_autofocus(int mode,int focus_set)
             return rc;
         else
             printk("Finish AF-trigger.\n");
-
+#if 0//Div2-SW6-MM-CL-CancelAF-00-
         do 
         {
             msleep(100);
@@ -2040,8 +2101,9 @@ static long mt9p111_set_autofocus(int mode,int focus_set)
             retry_count++;
         } while((f_state != 0x00)&&(retry_count<50));
         printk("mt9p111_set_autofocus_retry_count = %d\n", retry_count);
-        
+#endif
 //SW5-Multimedia-TH-MT9P111ReAFTest-00+{
+#if 0//Div2-SW6-MM-CL-CancelAF-00-
 #ifdef CONFIG_MT9P111_FAST_AF_SPECIAL_CONDITION
         //Read AF PASS or Fail
         rc = mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0x3000, WORD_LEN);
@@ -2099,6 +2161,7 @@ static long mt9p111_set_autofocus(int mode,int focus_set)
         }
         mdelay(50);
 #endif
+#endif
 //SW5-Multimedia-TH-MT9P111ReAFTest-00+}
 
     }
@@ -2110,6 +2173,86 @@ static long mt9p111_set_autofocus(int mode,int focus_set)
     }
     return rc;
 }
+
+//Div2-SW6-MM-CL-CancelAF-00+{
+static long mt9p111_check_autofocus(void)
+{
+    long rc = 0;
+    uint16_t f_state = 0;
+#ifdef CONFIG_MT9P111_FAST_AF_SPECIAL_CONDITION
+    uint16_t Poll_R0xB000_val = 0;
+    uint16_t AF_Brightness = 0;
+#endif
+    rc = mt9p111_i2c_read(mt9p111_client->addr, 0xB006, &f_state, BYTE_LEN);
+    printk("mt9p111_check_autofocus = 0x%x\n", f_state);
+    if(f_state != 0x00)
+    {
+        rc=-1;
+    }
+    else
+    {
+#ifdef CONFIG_MT9P111_FAST_AF_SPECIAL_CONDITION
+        //Read AF PASS or Fail
+        rc = mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0x3000, WORD_LEN);
+        if (rc < 0)
+            return rc;
+        Poll_R0xB000_val = 0x0010;
+        rc = mt9p111_i2c_read_poll(mt9p111_client->addr, 0xB000, &Poll_R0xB000_val, WORD_LEN, 40,5);
+        if (rc < 0)
+            return rc; 
+        printk("mt9p111 Fast 3.Poll_R0xB000_val = 0x%x\n", Poll_R0xB000_val);
+
+        if(Poll_R0xB000_val != 0x0010)
+        {
+            //Read Brightness
+            rc = mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0x380C, WORD_LEN);
+            if (rc < 0)
+                return rc;
+            rc = mt9p111_i2c_read(mt9p111_client->addr, 0xB80C, &AF_Brightness, WORD_LEN);
+            if(rc < 0)
+                return rc;
+            printk("mt9p111 Fast 4.AF_0xB80C = 0x%x\n", AF_Brightness);
+
+            //Set Manual AF
+            rc = mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0x8419, BYTE_LEN);
+            if (rc < 0)
+                return rc;
+            rc = mt9p111_i2c_write(mt9p111_client->addr,0x8419, 0x01, BYTE_LEN);
+            if (rc < 0)
+                return rc;
+            rc = mt9p111_i2c_write(mt9p111_client->addr,0x8404, 0x06, BYTE_LEN);
+            if (rc < 0)
+                return rc;
+            printk("mt9p111 Fast 5.Manual mode\n");
+
+            rc = mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0xB007, WORD_LEN);
+            if (rc < 0)
+                return rc;
+
+            if (AF_Brightness >= mt9p111info->fast_af_retest_target)
+            {
+                //Low Brightness
+                rc = mt9p111_i2c_write(mt9p111_client->addr, 0xB007, 0x20, BYTE_LEN);
+                if(rc < 0)
+                    return rc;  
+                printk("mt9p111 Fast 6.AF on Low Brightness\n");
+            }
+            else
+            {
+                //High Brightness
+                rc = mt9p111_i2c_write(mt9p111_client->addr, 0xB007, 0x00, BYTE_LEN);
+                if(rc < 0)
+                    return rc;  
+                printk("mt9p111 Fast 7.AF on High Brightness\n");
+            }
+        }
+        mdelay(50);
+#endif
+    printk("mt9p111_auto_focus finished~\n");
+    }
+    return rc;
+}
+//Div2-SW6-MM-CL-CancelAF-00+}
 
 static long mt9p111_set_focusrec(int x,int y,int w,int h)
 {
@@ -2136,11 +2279,25 @@ static long mt9p111_set_focusrec(int x,int y,int w,int h)
 
     CDBG("mt9p111_set_focusrec r_x=%x,r_y=%x,r_w=%x,r_h=%x\n",r_x,r_y,r_w,r_h);
 
-    mt9p111_i2c_write(mt9p111_client->addr, 0xB854, r_x, BYTE_LEN);
-    mt9p111_i2c_write(mt9p111_client->addr, 0xB855, r_y, BYTE_LEN);
-    mt9p111_i2c_write(mt9p111_client->addr, 0xB856, r_w, BYTE_LEN);
-    mt9p111_i2c_write(mt9p111_client->addr, 0xB857, r_h, BYTE_LEN);
-    mt9p111_i2c_write(mt9p111_client->addr, 0x8404, 0x06, BYTE_LEN);
+    //SW5-Multimedia-TH-TouchAF-01+{
+    if(mt9p111info->mclk_sw_pin!=0xffff)
+    {
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB854, r_x, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB855, r_y, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB856, r_w, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB857, r_h, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0x8404, 0x06, BYTE_LEN);
+    }
+    else
+    {
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB854, r_x, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB855, r_y, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB856, 0x33, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB857, 0x33, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0x8404, 0x06, BYTE_LEN);
+    }
+    //SW5-Multimedia-TH-TouchAF-01+}
+
     return rc;
 }
 
@@ -2153,12 +2310,25 @@ static long mt9p111_set_touchAEC(int enable,uint32_t x,uint32_t y)
 
     if(enable)
     {
-        x=x-60;
-        y=y-60;
-        if(x<=0)
-            x=0;
-        if(y<=0)
-            y=0;
+        //SW5-Multimedia-TH-TouchAF-00+{
+        if(mt9p111info->mclk_sw_pin!=0xffff)
+        {
+            x=x-60;
+            y=y-60;
+            if(x<=0)
+                x=0;
+            if(y<=0)
+                y=0;
+        }
+        else
+        {
+            if(x>250)
+                x=250;
+            if(y>170)
+                y=170;
+        }
+        //SW5-Multimedia-TH-TouchAF-00+}
+        
         r_x=(int8_t)(256 * x /mt9p111_FRAME_WIDTH );
         r_y=(int8_t)(256 * y /mt9p111_FRAME_HEIGHT );
         printk("mt9p111_set_touchAEC r_x=%x,r_y=%x\n",r_x,r_y);
@@ -2167,10 +2337,22 @@ static long mt9p111_set_touchAEC(int enable,uint32_t x,uint32_t y)
         mt9p111_touchAEC_mode=enable;
 
         mt9p111_i2c_write(mt9p111_client->addr, 0x098E, 0xB820, WORD_LEN);
-        mt9p111_i2c_write(mt9p111_client->addr, 0xB820, r_x, BYTE_LEN);
-        mt9p111_i2c_write(mt9p111_client->addr, 0xB821, r_y, BYTE_LEN);
-        mt9p111_i2c_write(mt9p111_client->addr, 0xB822, 0x33, BYTE_LEN);
-        mt9p111_i2c_write(mt9p111_client->addr, 0xB823, 0x33, BYTE_LEN);
+        //SW5-Multimedia-TH-TouchAF-00+{
+        if(mt9p111info->mclk_sw_pin!=0xffff)
+        {
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB820, r_x, BYTE_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB821, r_y, BYTE_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB822, 0x33, BYTE_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB823, 0x33, BYTE_LEN);
+        }
+        else
+        {
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB820, r_x, BYTE_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB821, r_y, BYTE_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB822, 0x80, BYTE_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0xB823, 0x80, BYTE_LEN);
+        }
+        //SW5-Multimedia-TH-TouchAF-00+}
         mt9p111_i2c_write(mt9p111_client->addr, 0x8404, 0x06, BYTE_LEN);
     }
     else
@@ -2282,6 +2464,99 @@ static int mt9p111_set_iso(camera_iso_mode iso)
             rc = mt9p111_i2c_write_table(&mt9p111_regs.iso_800_tbl[0], mt9p111_regs.iso_800_tbl_size);
             if (rc < 0)
                 return rc;
+        }
+            break;
+
+        default:
+            return -EINVAL;
+    }
+
+    return rc;
+}
+//Div6D1-CL-Camera-autofocus-06+{
+static long mt9p111_set_afmode(int mode, int afmode)
+{
+    long rc = 0;
+    uint16_t seq_state = 0;
+    uint16_t retry_count=0;
+
+    if(mt9p111_af_mode == afmode)
+    {
+        printk("mt9p111_set_afmode, old = %d, new = %d\n", mt9p111_af_mode, afmode);
+        return 0;
+    }
+    mt9p111_af_mode = afmode;
+    printk("mt9p111_set_afmode, afmode = %d\n", afmode);
+    mt9p111_parameters_changed_count++;
+
+    
+    rc = mt9p111_i2c_read(mt9p111_client->addr, 0x8405, &seq_state, BYTE_LEN);
+    printk("mt9p111  seq_state = 0x%x\n", seq_state);
+    if((seq_state != 0x03)&&(seq_state != 0x07))
+    {
+        do 
+        {
+            msleep(30);
+            rc = mt9p111_i2c_read(mt9p111_client->addr, 0x8405, &seq_state, BYTE_LEN);
+            printk("mt9p111  seq_state = 0x%x\n", seq_state);
+            retry_count++;
+        } 
+        while(((seq_state != 0x03)&&(seq_state != 0x07))&&(retry_count<50));
+    }
+
+    switch (afmode) 
+    {
+        case AF_MODE_NORMAL:
+        {
+            rc = mt9p111_i2c_write_table(&mt9p111_regs.aftbl[0], mt9p111_regs.aftbl_size);
+            if (rc < 0)
+                return rc;
+        }
+            break;
+
+        case AF_MODE_MACRO:
+        {
+            rc = mt9p111_i2c_write_table(&mt9p111_regs.marcoaftbl[0], mt9p111_regs.marcoaftbl_size);
+            if (rc < 0)
+                return rc;
+        }
+            break;
+
+        case AF_MODE_AUTO:
+        {
+            rc = mt9p111_i2c_write_table(&mt9p111_regs.aftbl[0], mt9p111_regs.aftbl_size);
+            if (rc < 0)
+                return rc;
+        }
+            break;
+
+        default:
+            return -EINVAL;
+    }
+
+    return rc;
+
+}
+//Div6D1-CL-Camera-autofocus-06+}
+
+static long mt9p111_set_dis(int mode, int dis)
+{
+    long rc = 0;
+    printk("mt9p111_set_dis, mode = %d\n",dis);
+
+    switch (dis) 
+    {
+        case 1:
+        {
+            mt9p111_i2c_write(mt9p111_client->addr, 0x098E, 0x800D, WORD_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0x800D, 0x01, BYTE_LEN);
+        }
+            break;
+
+        case 0:
+        {
+            mt9p111_i2c_write(mt9p111_client->addr, 0x098E, 0x800D, WORD_LEN);
+            mt9p111_i2c_write(mt9p111_client->addr, 0x800D, 0x00, BYTE_LEN);
         }
             break;
 
@@ -2506,8 +2781,8 @@ static long mt9p111_set_sensor_mode(int mode)
                 if (rc < 0)
                     return rc;
             }
-    
-            rc = mt9p111_i2c_read(mt9p111_client->addr, mt9p111info->flash_target_addr, &flash_target_addr_val, WORD_LEN);
+            if(pid!=Product_FB3)//Div2-SW6-MM-CL-FB3LED-00+
+                rc = mt9p111_i2c_read(mt9p111_client->addr, mt9p111info->flash_target_addr, &flash_target_addr_val, WORD_LEN);
             if (rc < 0)
                 return rc;
             printk("mt9p111_msg: SNAPSHOT_MODE: ledmod = %d, flash_target_addr(0x%x) = %x.\n", mt9p111_m_ledmod, mt9p111info->flash_target_addr, flash_target_addr_val);
@@ -2563,7 +2838,7 @@ static long mt9p111_set_sensor_mode(int mode)
                 
 #ifdef CONFIG_FIH_AAT1272
                 //Write Reg 1 with 0x33 to let AAT1272 enter into Movie mode and flash with default brightness
-                rc = aat1272_i2c_write(aat1272_client->addr, 0x01, 0x31, AAT1272_LEN);	 //0x33
+                rc = aat1272_i2c_write(aat1272_client->addr, 0x01, mt9p111info->preflash_light, AAT1272_LEN);	 //0x33//Div2-SW6-MM-CL-FB3LED-00*
                 if (rc < 0)
                     return rc;
 #endif
@@ -2606,11 +2881,14 @@ static long mt9p111_set_sensor_mode(int mode)
 
                 if (hrtimer_active(&mt9p111_flashled_timer))
                     printk(KERN_INFO "%s: TIMER running\n", __func__);
-                if(pid==Product_FD1)//For FD1
+                if((pid==Product_FD1)||(pid==Product_FB3))//Div2-SW6-MM-CL-FB3LED-00*{
                 {
                     rc = fih_cam_output_gpio_control(mt9p111info->GPIO_FLASHLED_DRV_EN, FLASHLED_ID, 0);
-                    mdelay(120);
-                }
+                    if(pid==Product_FB3)
+                        mdelay(110);
+                    else
+                        mdelay(120);
+                }//Div2-SW6-MM-CL-FB3LED-00*}
             }
 #endif
 
@@ -2707,28 +2985,29 @@ static long mt9p111_set_sensor_mode(int mode)
             printk(KERN_ERR "mt9p111_msg: case SENSOR_RAW_SNAPSHOT_MODE end~~~~~~~~~~.\n");
         }
             break;
-        //Div2-SW6-MM-CL-mt9p111noImage-00+{
+        //Div2-SW6-MM-CL-mt9p111noImage-02+{
         case SENSOR_RESET_MODE:
         {
             printk("mt9p111 SENSOR_RESET_MODE E.\n");
-            /* 5M Reset Pin Pull Low*/
-            rc = fih_cam_output_gpio_control(mt9p111info->rst_pin, "mt9p111", 0);
-            msleep(1); 
-        
-            gpio_tlmm_config(GPIO_CFG(mt9p111info->MCLK_PIN, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_DISABLE);
-            msleep(5); 
-            gpio_tlmm_config(GPIO_CFG(mt9p111info->MCLK_PIN, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-            msleep(1);
-        
-            rc = fih_cam_output_gpio_control(mt9p111info->rst_pin, "mt9p111", 1);
-            msleep(10);
-        
+
+            printk("mt9p111 SENSOR_RESET_MODE:  Power off ..\n");
+            mt9p111_power_off();
+
+            printk("mt9p111 SENSOR_RESET_MODE:  msleep(1000) ..\n");
+            msleep(1000);
+
+            printk("mt9p111 SENSOR_RESET_MODE:  Power on ..\n");
+            mt9p111_power_on();
+            mdelay(10);
+
+            printk("mt9p111 SENSOR_RESET_MODE:  Init reg ..\n");
             mt9p111_reg_init();
             mt9p111_reg_init2();
-            printk("mt9p111 SENSOR_RESET_MODE X.\n");
+            mt9p111_reset_count++;
+            printk("mt9p111 SENSOR_RESET_MODE count=%d X.\n",mt9p111_reset_count);
         }
             break;
-        //Div2-SW6-MM-CL-mt9p111noImage-00+}
+        //Div2-SW6-MM-CL-mt9p111noImage-02+}
 
         default:
             return -EINVAL;
@@ -2770,7 +3049,7 @@ int mt9p111_power_on(void)
         }
         mt9p111_vreg_acore=1;
 
-        mdelay(2);
+        msleep(2);
 
         /* Enable MCLK = 24MHz */
         gpio_tlmm_config(GPIO_CFG(mt9p111info->MCLK_PIN, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
@@ -2781,7 +3060,7 @@ int mt9p111_power_on(void)
         if (rc)
             return rc;
 
-        mdelay(10);
+        msleep(10);
 
         return rc;
     }
@@ -2848,7 +3127,7 @@ int mt9p111_power_off(void)
         if (rc)
             return rc;
 
-        mdelay(5);
+        msleep(5);
 
         /* Disable camera 1.8V power*/
         if(mt9p111_vreg_vddio==1)
@@ -2952,7 +3231,7 @@ static int mt9p111_sensor_init_probe(const struct msm_camera_sensor_info *data)
         rc = fih_cam_output_gpio_control(mt9p111info->mclk_sw_pin, "mt9p111", 0);
         if (rc)
             goto init_probe_fail;
-        mdelay(2);
+        msleep(2);
     }
 
 #ifdef CONFIG_MT9P111_STANDBY
@@ -2965,14 +3244,14 @@ static int mt9p111_sensor_init_probe(const struct msm_camera_sensor_info *data)
         rc = fih_cam_output_gpio_control(mt9p111info->pwdn_pin, "mt9p111", 0);
         if (rc)
             return rc;
-        mdelay(10);
+        msleep(10);
 
         /* 5M Reset Pin Pull Low*/
         rc = fih_cam_output_gpio_control(mt9p111info->rst_pin, "mt9p111", 0);
         if (rc)
             return rc;
 
-        mdelay(10);
+        msleep(10);
 
         mt9p111_power_on();
 
@@ -3016,13 +3295,14 @@ static int mt9p111_sensor_init_probe(const struct msm_camera_sensor_info *data)
 
         mt9p111_exposure_mode=CAMERA_AEC_FRAME_AVERAGE;
         mt9p111_antibanding_mode=CAMERA_ANTIBANDING_AUTO;
-        mt9p111_brightness_mode=CAMERA_BRIGHTNESS_LV3;
-        mt9p111_contrast_mode=CAMERA_CONTRAST_LV5;
+        mt9p111_brightness_mode=CAMERA_BRIGHTNESS_3;
+        mt9p111_contrast_mode=CAMERA_CONTRAST_ZERO;
         mt9p111_effect_mode=CAMERA_EFFECT_OFF;
-        mt9p111_saturation_mode=CAMERA_SATURATION_LV4;
-        mt9p111_sharpness_mode=CAMERA_SHARPNESS_LV5;
+        mt9p111_saturation_mode=CAMERA_SATURATION_ZERO;
+        mt9p111_sharpness_mode=CAMERA_SHARPNESS_ZERO;
         mt9p111_whitebalance_mode=CAMERA_WB_AUTO;
         mt9p111_iso_mode=CAMERA_ISO_ISO_AUTO;
+        mt9p111_af_mode=AF_MODE_AUTO;
 
         mt9p111_rectangle_x=270;
         mt9p111_rectangle_y=190;
@@ -3203,7 +3483,7 @@ int mt9p111_sensor_config(void __user *argp)
             break;
 
         case CFG_SET_CAF:
-        {               
+        {
             rc = mt9p111_set_CAF(cfg_data.mode,cfg_data.cfg.CAF);//Div2-SW6-MM-HL-Camera-CAF-00+
         }
         break; 
@@ -3211,7 +3491,7 @@ int mt9p111_sensor_config(void __user *argp)
         case CFG_SET_AUTOFOCUS:
         {               
             rc = mt9p111_set_autofocus(cfg_data.mode,cfg_data.cfg.autofocus);
-        }           
+        }
         break; 
 
         case CFG_SET_FOCUSREC:
@@ -3232,9 +3512,27 @@ int mt9p111_sensor_config(void __user *argp)
         }
             break;
 
-        case CFG_SET_TOUCHAEC:
+        case CFG_SET_touchAEC:
         {
             rc = mt9p111_set_touchAEC(cfg_data.cfg.AECIndex.enable,cfg_data.cfg.AECIndex.AEC_X,cfg_data.cfg.AECIndex.AEC_Y);
+        }
+            break;
+
+        case CFG_SET_AFMODE:
+        {
+            rc = mt9p111_set_afmode(cfg_data.mode,cfg_data.cfg.afmode);
+        }
+            break;
+
+        case CFG_SET_DIS:
+        {
+            rc = mt9p111_set_dis(cfg_data.mode,cfg_data.cfg.dis);
+        }
+            break;
+
+        case CFG_GET_AFSTATE:
+        {
+            rc = mt9p111_check_autofocus();//Div2-SW6-MM-CL-CancelAF-00+
         }
             break;
 
@@ -3334,24 +3632,43 @@ int mt9p111_sensor_release(void)
     printk("mt9p111_sensor_release()+++\n");
     if(mt9p111info->AF_pmic_en_pin!=0xffff)
         pm8058_gpio_config(mt9p111info->AF_pmic_en_pin, &af_dis);
+    //SW5-Multimedia-TH-TouchAF-01+{
+    else
+    {
+        //Set Manual AF
+        mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0x8419, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr,0x8419, 0x01, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr,0x8404, 0x06, BYTE_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr,0x098E, 0xB007, WORD_LEN);
+        mt9p111_i2c_write(mt9p111_client->addr, 0xB007, 0x00, BYTE_LEN);
+        printk("mt9p111_sensor_release : Manual AF to home\n");
+    }
+    //SW5-Multimedia-TH-TouchAF-01+}
 
 #ifdef CONFIG_MT9P111_STANDBY
-    mt9p111_set_antibanding(SENSOR_PREVIEW_MODE,CAMERA_ANTIBANDING_OFF);
-    mt9p111_set_brightness(SENSOR_PREVIEW_MODE,CAMERA_BRIGHTNESS_LV3);
-    mt9p111_set_contrast(SENSOR_PREVIEW_MODE,CAMERA_CONTRAST_LV5);
-    mt9p111_set_effect(SENSOR_PREVIEW_MODE,CAMERA_EFFECT_OFF);
-    mt9p111_set_touchAEC(0,0,0);
-    mt9p111_set_exposure_mode(SENSOR_PREVIEW_MODE,CAMERA_AEC_FRAME_AVERAGE);
-    mt9p111_set_saturation(SENSOR_PREVIEW_MODE,CAMERA_SATURATION_LV4);
-    mt9p111_set_sharpness(SENSOR_PREVIEW_MODE,CAMERA_SHARPNESS_LV5);
-    mt9p111_set_whitebalance(SENSOR_PREVIEW_MODE,CAMERA_WB_AUTO);
-    mt9p111_set_CAF(0,0);//Div2-SW6-MM-HL-Camera-CAF-00+
-    rc =mtp9111_sensor_standby(0);
-    if(rc < 0 )
+    if((mt9p111_init_done==1)&&(mt9p111_reset_count==0))//Div2-SW6-MM-CL-mt9p111noImage-02+
+    {
+        if(mt9p111_snapshoted==1)
+            mt9p111_set_sensor_mode(SENSOR_PREVIEW_MODE);//Div2-SW6-MM-CL-CTStimeout-00+
+        mt9p111_set_antibanding(SENSOR_PREVIEW_MODE,CAMERA_ANTIBANDING_OFF);
+        mt9p111_set_brightness(SENSOR_PREVIEW_MODE,CAMERA_BRIGHTNESS_3);
+        mt9p111_set_contrast(SENSOR_PREVIEW_MODE,CAMERA_CONTRAST_ZERO);
+        mt9p111_set_effect(SENSOR_PREVIEW_MODE,CAMERA_EFFECT_OFF);
+        mt9p111_set_touchAEC(0,0,0);
+        mt9p111_set_exposure_mode(SENSOR_PREVIEW_MODE,CAMERA_AEC_FRAME_AVERAGE);
+        mt9p111_set_saturation(SENSOR_PREVIEW_MODE,CAMERA_SATURATION_ZERO);
+        mt9p111_set_sharpness(SENSOR_PREVIEW_MODE,CAMERA_SHARPNESS_ZERO);
+        mt9p111_set_whitebalance(SENSOR_PREVIEW_MODE,CAMERA_WB_AUTO);
+        mt9p111_set_afmode(SENSOR_PREVIEW_MODE,AF_MODE_AUTO);
+        mt9p111_set_CAF(0,0);//Div2-SW6-MM-HL-Camera-CAF-00+
+        rc =mtp9111_sensor_standby(0);
+    }
+    if((rc < 0 )||(mt9p111_init_done==0)||(mt9p111_reset_count>0))//Div2-SW6-MM-CL-mt9p111noImage-01*
     {
         mt9p111_first_init=1;
         mt9p111_init_done=0;
         mt9p111_snapshoted=0;
+        mt9p111_reset_count=0;//Div2-SW6-MM-CL-mt9p111noImage-01+
         mt9p111_power_off();
     }
     gpio_tlmm_config(GPIO_CFG(mt9p111info->MCLK_PIN, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_DISABLE);
@@ -3366,12 +3683,6 @@ int mt9p111_sensor_release(void)
                 rc = fih_cam_vreg_control(mt9p111info->cam_vreg_acore_id, 2800, 0);
             else
                 rc = fih_cam_output_gpio_control(mt9p111info->cam_v2p8_en_pin, "mt9p111", 0);
-
-            if (rc) {
-                printk(KERN_ERR "%s: vreg disable failed (%d)\n", __func__, rc);
-                mutex_unlock(&mt9p111_mut);
-                return -EIO;
-            }
         }
     }
     mt9p111_vreg_acore=0;
@@ -3379,6 +3690,17 @@ int mt9p111_sensor_release(void)
 #else
         rc = mt9p111_power_off();
 #endif
+
+//Div2-SW6-MM-MC-FixTeslaLedCanNotTurnOff-00+{
+#ifdef CONFIG_FIH_FITI_FP6773
+    if ( mt9p111_m_ledmod == LED_MODE_TORCH)
+    {
+        fih_cam_output_gpio_control(mt9p111info->GPIO_FLASHLED_DRV_EN, FLASHLED_ID, 0);
+        printk("mt9p111_sensor_release : Pull Low mt9p111info->GPIO_FLASHLED_DRV_EN ...\n");
+    }
+#endif
+//Div2-SW6-MM-MC-FixTeslaLedCanNotTurnOff-00+}
+
     kfree(mt9p111_ctrl);
     mt9p111_ctrl = NULL;
 
@@ -3730,7 +4052,7 @@ static int create_attributes(struct i2c_client *client)
     if (rc < 0) {
         dev_err(&client->dev, "%s: Create mt9p111 attribute \"patch_reg\" failed!! <%d>", __func__, rc);
         return rc; 
-    }	
+    }
 
     rc = device_create_file(&client->dev, &dev_attr_pll_reg_mt9p111);
     if (rc < 0) {
@@ -4217,6 +4539,8 @@ static int mt9p111_sensor_probe(const struct msm_camera_sensor_info *info,
     /* Init 5M pins state */
     if(mt9p111info->standby_pin!=0xffff)
         gpio_tlmm_config(GPIO_CFG(mt9p111info->standby_pin, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), GPIO_CFG_DISABLE);
+
+    gpio_tlmm_config(GPIO_CFG(mt9p111info->rst_pin, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);//Div2-SW6-MM-MC-BringUpHM0357ForSF5PCR-00+
 
     rc = fih_cam_output_gpio_control(mt9p111info->rst_pin, "mt9p111", 0);
     if (rc)

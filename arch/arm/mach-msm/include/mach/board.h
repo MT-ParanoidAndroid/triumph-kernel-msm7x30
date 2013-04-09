@@ -85,10 +85,6 @@ struct msm_camera_legacy_device_platform_data {
 
 #define MSM_CAMERA_FLASH_SRC_PMIC (0x00000001<<0)
 #define MSM_CAMERA_FLASH_SRC_PWM  (0x00000001<<1)
-#define MSM_CAMERA_FLASH_SRC_CURRENT_DRIVER	(0x00000001<<2)
-#define MSM_CAMERA_FLASH_SRC_EXT     (0x00000001<<3)
-#define MSM_CAMERA_FLASH_SRC_LED (0x00000001<<3)
-
 //Div6D1-CL-Camera-SensorInfo-00+{
 #define MSM_CAMERA_SENSOR_ORIENTATION_0 0
 #define MSM_CAMERA_SENSOR_ORIENTATION_90 1
@@ -155,34 +151,11 @@ struct msm_parameters_data {
 };
 //Div6D1-CL-Camera-SensorInfo-01+}
 struct msm_camera_sensor_strobe_flash_data {
-	uint8_t flash_trigger;
-	uint8_t flash_charge; /* pin for charge */
-	uint8_t flash_charge_done;
+	int flash_charge; /* pin for charge */
 	uint32_t flash_recharge_duration;
 	uint32_t irq;
 	spinlock_t spin_lock;
 	spinlock_t timer_lock;
-	int state;
-};
-
-enum msm_camera_type {
-	BACK_CAMERA_2D,
-	FRONT_CAMERA_2D,
-	BACK_CAMERA_3D,
-	BACK_CAMERA_INT_3D,
-};
-
-enum camera_vreg_type {
-	REG_LDO,
-	REG_VS,
-};
-
-struct camera_vreg_t {
-	char *reg_name;
-	enum camera_vreg_type type;
-	int min_voltage;
-	int max_voltage;
-	int op_mode;
 };
 
 struct msm_camera_sensor_info {
@@ -221,12 +194,13 @@ struct msm_camera_sensor_info {
         int flash_main_waittime;
         int flash_main_starttime;
         int flash_second_waittime;
+        int preflash_light;//Div2-SW6-MM-CL-FB3LED-00+
         //SW5-Multimedia-TH-FlashModeSetting-01+}
         
         //SW5-Multimedia-TH-MT9P111ReAFTest-00+{
         int fast_af_retest_target;
         //SW5-Multimedia-TH-MT9P111ReAFTest-00+}
-        
+        int torch_light;//Div2-SW6-MM-CL-FB3LED-00+
         struct msm_camera_device_platform_data *pdata;
         struct resource *resource;
         uint8_t num_resources;

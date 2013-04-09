@@ -795,7 +795,7 @@ static struct mt9p111_i2c_reg_conf const iq_tbl[] = {
 
     //ccm_saturation
     {0xBC56, 0x80 , BYTE_LEN, 0 },	// LL_START_CCM_SATURATION
-    {0xBC57, 0x00 , BYTE_LEN, 0 },	// LL_END_CCM_SATURATION
+    {0xBC57, 0x50 , BYTE_LEN, 0 },	// LL_END_CCM_SATURATION
 
     //DCCM
     {0xBCDE, 0x03 , BYTE_LEN, 0 },	// LL_START_SYS_THRESHOLD
@@ -1920,28 +1920,57 @@ static const struct mt9p111_i2c_reg_conf const AF_setting[] = {
 	//AF_VCM_enable
 	{ 0x098E, 0xC400, WORD_LEN, 0 },	// LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
 	{ 0xC400, 0x88, BYTE_LEN, 0 },	// AFM_ALGO 
-	{ 0xC40A, 0x0048, WORD_LEN, 0 },  // AFM_POS_MIN	
-	{ 0xC40C, 0x00E0, WORD_LEN, 0 },  // AFM_POS_MAX	
+	{ 0xC40A, 0x0010, WORD_LEN, 0 },  // AFM_POS_MIN    
+	{ 0xC40C, 0x00E8, WORD_LEN, 0 },  // AFM_POS_MAX   
 	{ 0xC402, 0x00, BYTE_LEN, 0 },	// AFM_MODE 
-	{ 0xB854, 0x52, BYTE_LEN, 0 },	// STAT_SM_WINDOW_POS_X 
-	{ 0xB855, 0x58, BYTE_LEN, 0 },	// STAT_SM_WINDOW_POS_Y 
-	{ 0xB856, 0x5D, BYTE_LEN, 0 },	// STAT_SM_WINDOW_SIZE_X	
-	{ 0xB857, 0x5A, BYTE_LEN, 0 },	// STAT_SM_WINDOW_SIZE_Y	
+	{ 0xB045, 0x0015, WORD_LEN, 0 },  // AF_MODE_EX    //Div2-SW6-MM-MC-TouchAF-00+
+	{ 0xB854, 0x66, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_X
+	{ 0xB855, 0x66, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_Y
+	{ 0xB856, 0x33, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_X
+	{ 0xB857, 0x33, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_Y
 	{ 0xB012, 0x09, BYTE_LEN, 0 },	// AF_FS_NUM_STEPS	
 	{ 0xB018, 0x00, BYTE_LEN, 0 },	// AF_FS_POS_0	
-	{ 0xB019, 0x28, BYTE_LEN, 0 },	// AF_FS_POS_1	
-	{ 0xB01A, 0x40, BYTE_LEN, 0 },	// AF_FS_POS_2	
-	{ 0xB01B, 0x58, BYTE_LEN, 0 },	// AF_FS_POS_3	
-	{ 0xB01C, 0x70, BYTE_LEN, 0 },	// AF_FS_POS_4	
-	{ 0xB01D, 0x88, BYTE_LEN, 0 },	// AF_FS_POS_5	
+	{ 0xB019, 0x18, BYTE_LEN, 0 },       // AF_FS_POS_1
+	{ 0xB01A, 0x30, BYTE_LEN, 0 },      // AF_FS_POS_2
+	{ 0xB01B, 0x48, BYTE_LEN, 0 },      // AF_FS_POS_3
+	{ 0xB01C, 0x60, BYTE_LEN, 0 },      // AF_FS_POS_4
+	{ 0xB01D, 0x80, BYTE_LEN, 0 },      // AF_FS_POS_5
 	{ 0xB01E, 0xA0, BYTE_LEN, 0 },	// AF_FS_POS_6	
-	{ 0xB01F, 0xB8, BYTE_LEN, 0 },	// AF_FS_POS_7	
-	{ 0xB020, 0xD0, BYTE_LEN, 0 },	// AF_FS_POS_8	
+	{ 0xB01F, 0xC0, BYTE_LEN, 0 },      // AF_FS_POS_7
+	{ 0xB020, 0xE0, BYTE_LEN, 0 },       // AF_FS_POS_8
 	{ 0xB002, 0x0002, WORD_LEN, 0 },  // AF_MODE
 	{ 0xB02C, 0x20, BYTE_LEN, 0 },	// AF_HC_STEP
 	{ 0x8404, 0x05, BYTE_LEN, 300 }, 	// SEQ_CMD
-	//{ 0x8404, 0x05, BYTE_LEN, 0 }, 	// SEQ_CMD
-	//{ 0x8404, 0x00, BYTE_POLL, 0 },
+	{ 0x3EDA, 0x6060, WORD_LEN, 0 },      // DAC_LD_14_15
+	{ 0x0018, 0x2008, WORD_LEN, 100 },      // STANDBY_CONTROL_AND_STATUS
+};
+
+static const struct mt9p111_i2c_reg_conf const AF_MARCO_setting[] = {
+	//[Step8-Features]
+	//AF_VCM_enable
+	{ 0x098E, 0xC400, WORD_LEN, 0 },	// LOGICAL_ADDRESS_ACCESS [AFM_ALGO]
+	{ 0xC400, 0x88, BYTE_LEN, 0 },	// AFM_ALGO 
+	{ 0xC40A, 0x0070, WORD_LEN, 0 },  // AFM_POS_MIN    
+	{ 0xC40C, 0x00E8, WORD_LEN, 0 },  // AFM_POS_MAX   
+	{ 0xC402, 0x00, BYTE_LEN, 0 },	// AFM_MODE 
+	{ 0xB045, 0x0015, WORD_LEN, 0 },  // AF_MODE_EX    //Div2-SW6-MM-MC-TouchAF-00+
+	{ 0xB854, 0x66, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_X
+	{ 0xB855, 0x66, BYTE_LEN, 0 },  // STAT_SM_WINDOW_POS_Y
+	{ 0xB856, 0x33, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_X
+	{ 0xB857, 0x33, BYTE_LEN, 0 },  // STAT_SM_WINDOW_SIZE_Y
+	{ 0xB012, 0x09, BYTE_LEN, 0 },	// AF_FS_NUM_STEPS	
+	{ 0xB018, 0x00, BYTE_LEN, 0 },	// AF_FS_POS_0	
+	{ 0xB019, 0x18, BYTE_LEN, 0 },       // AF_FS_POS_1
+	{ 0xB01A, 0x30, BYTE_LEN, 0 },      // AF_FS_POS_2
+	{ 0xB01B, 0x48, BYTE_LEN, 0 },      // AF_FS_POS_3
+	{ 0xB01C, 0x60, BYTE_LEN, 0 },      // AF_FS_POS_4
+	{ 0xB01D, 0x80, BYTE_LEN, 0 },      // AF_FS_POS_5
+	{ 0xB01E, 0xA0, BYTE_LEN, 0 },	// AF_FS_POS_6	
+	{ 0xB01F, 0xC0, BYTE_LEN, 0 },      // AF_FS_POS_7
+	{ 0xB020, 0xE0, BYTE_LEN, 0 },       // AF_FS_POS_8
+	{ 0xB002, 0x0002, WORD_LEN, 0 },  // AF_MODE
+	{ 0xB02C, 0x20, BYTE_LEN, 0 },	// AF_HC_STEP
+	{ 0x8404, 0x05, BYTE_LEN, 300 }, 	// SEQ_CMD
 	{ 0x3EDA, 0x6060, WORD_LEN, 0 },      // DAC_LD_14_15
 	{ 0x0018, 0x2008, WORD_LEN, 100 },      // STANDBY_CONTROL_AND_STATUS
 };
@@ -2208,12 +2237,21 @@ static const struct mt9p111_i2c_reg_conf const EF_SOLARIZE_setting[] = {
 //Div6D1-HL-Camera-Effect-00+}
 
 //Div6D1-HL-Camera-Effect-00+{
-static const struct mt9p111_i2c_reg_conf const EXP_NORMAL_setting[] = {
+static const struct mt9p111_i2c_reg_conf const EXP_AVERAGE_setting[] = {
     { 0x098E, 0xB820, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS
     { 0xB820, 0x14, BYTE_LEN, 0 },	// STAT_AE_WINDOW_POS_X
     { 0xB821, 0x14, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
     { 0xB822, 0xD2, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
     { 0xB823, 0xD2, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
+    { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
+};
+
+static const struct mt9p111_i2c_reg_conf const EXP_NORMAL_setting[] = {
+    { 0x098E, 0xB820, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS
+    { 0xB820, 0x55, BYTE_LEN, 0 },	// STAT_AE_WINDOW_POS_X
+    { 0xB821, 0x55, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
+    { 0xB822, 0x5A, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
+    { 0xB823, 0x5A, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
     { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
 };
 
@@ -2223,15 +2261,6 @@ static const struct mt9p111_i2c_reg_conf const EXP_SPOT_setting[] = {
     { 0xB821, 0x66, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
     { 0xB822, 0x33, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
     { 0xB823, 0x33, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
-    { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
-};
-
-static const struct mt9p111_i2c_reg_conf const EXP_AVERAGE_setting[] = {
-    { 0x098E, 0xB820, WORD_LEN, 0 }, // LOGICAL_ADDRESS_ACCESS
-    { 0xB820, 0x26, BYTE_LEN, 0 },	// STAT_AE_WINDOW_POS_X
-    { 0xB821, 0x26, BYTE_LEN, 0 },	//STAT_AE_WINDOW_POS_Y
-    { 0xB822, 0xB5, BYTE_LEN, 0 },	// STAT_AE_WINDOW_SIZE_X
-    { 0xB823, 0xB5, BYTE_LEN, 0 },	//STAT_AE_WINDOW_SIZE_Y
     { 0x8404, 0x06, BYTE_LEN, 0 },	// SEQ_CMD	//Div2-SW6-MM-KK-WorkaroundSnapshotFail-0//Div6D1-CL-Camera-autofocus-03*//Div6D1-CL-Camera-HDfail-00*//Div6D1-CL-Camera-SnapShotFail-00*
 };
 //Div6D1-HL-Camera-Effect-00+}
@@ -2487,6 +2516,8 @@ struct mt9p111_reg mt9p111_regs = {
 	//FIHLX-D6P2-MM-KK-Aptina5M-0++
 	.aftbl = AF_setting,
 	.aftbl_size = ARRAY_SIZE(AF_setting),
+	.marcoaftbl=AF_MARCO_setting,
+	.marcoaftbl_size=ARRAY_SIZE(AF_MARCO_setting),
 	//FIHLX-D6P2-MM-KK-Aptina5M-0--
 	//Div6D1-HL-Camera-AntiBanding-00+{	
 	.ab_off_tbl = AB_OFF_setting,
