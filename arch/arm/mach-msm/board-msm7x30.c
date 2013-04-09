@@ -4081,6 +4081,11 @@ static struct i2c_board_info msm_i2c_board_info[] = {
 //Div2D5-OwenHuang-SF8_Sensor_Porting-00+}
 
 //Div2-SW2-BSP-Touch, Vincent +
+#ifdef CONFIG_FIH_TOUCHSCREEN_INNOLUX
+    {
+        I2C_BOARD_INFO("innolux_ts", 0x00),
+    },
+#endif
 #ifdef CONFIG_FIH_TOUCHSCREEN_BU21018MWV
     {
         I2C_BOARD_INFO("bu21018mwv", 0x5C),

@@ -270,6 +270,20 @@ if FIH_CONFIG_GROUP
             help
                 Toshiba tcm9001md hw standby
 
+        config FIH_HM0357
+            bool "Himax Sensor HM0357 (YUV 0.3M)"
+            depends on MSM_CAMERA && FIH_CONFIG_GROUP
+            default y
+            help
+                FIH Himax 0.3M YUV Sensor
+
+        config HM0357_STANDBY
+            bool "hm0357 soft standby"
+            depends on FIH_HM0357
+            default y
+            help
+                Himax hm0357 soft standby
+
         config SENSORS_YAS529
             bool "Yamaha YAS529 Driver(Combined with Bosch BMA150)"
             depends on MSM_CAMERA && FIH_CONFIG_GROUP
@@ -1212,6 +1226,12 @@ if FIH_CONFIG_GROUP
             help
                 This option enables this feature if there is HDMI support on the device.
 
+        config FIH_SFX_AUDIO
+            bool "Audio Driver"
+            depends on FIH_CONFIG_GROUP
+            default y
+            help
+                This option enables this feature if project is SFX
     endmenu
 
     # --- SF8-------------------------------------------------- END
@@ -1474,6 +1494,13 @@ if FIH_CONFIG_GROUP
               more of what is going on.
         endif
 
+        config FIH_TOUCHSCREEN_INNOLUX
+            bool "INNOLUX Touchscreen"
+            depends on I2C && FIH_CONFIG_GROUP
+            default y
+            help
+                Select if the INNOLUX touch panel is attached.
+                
         config FIH_TOUCHSCREEN_BU21018MWV
             bool "BU21018MWV Touchscreen"
             depends on I2C && FIH_CONFIG_GROUP
@@ -1560,7 +1587,7 @@ if FIH_CONFIG_GROUP
     config FIH_POWER_LOG
             bool "FIH LOG about Power & Battery Log"
             depends on FIH_CONFIG_GROUP
-            default n
+            default y
             help
                 Enable power & battery log support
 
@@ -1574,7 +1601,7 @@ if FIH_CONFIG_GROUP
     config FIH_FLOG
             bool "FIH Flog"
             depends on FIH_CONFIG_GROUP
-            default n
+            default y
             help
                 Enable FTM log mechanism
 
@@ -1588,7 +1615,7 @@ if FIH_CONFIG_GROUP
     config FIH_MLOG
             bool "FIH Mlog"
             depends on FIH_CONFIG_GROUP
-            default n
+            default y
             help
                 Enable Mlog mechanism
 
@@ -1612,6 +1639,13 @@ if FIH_CONFIG_GROUP
             default n
             help
                 Enable to dump wakelock if it active.                
+
+    config FIH_SUSPEND_HANG_TIMER
+            bool "FIH SUSPEND HANG TIMER"
+            depends on FIH_CONFIG_GROUP
+            default n
+            help
+                Enable to dump suspend information while suspend hang.
     endmenu
 
     config FIH_REMOVE_SERIAL_DYNAMICALLY
