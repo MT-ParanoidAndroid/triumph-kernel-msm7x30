@@ -34,6 +34,8 @@
 #include <mach/system.h>
 #include <linux/remote_spinlock.h>
 
+#include <asm/cacheflush.h>
+
 #include "smd_private.h"
 #include "proc_comm.h"
 #include "modem_notifier.h"
@@ -216,6 +218,9 @@ static void handle_modem_crash(void)
 	if (msm_reset_hook)
 		msm_reset_hook();
 	*/
+
+	/* Make sure the data and buffers are all stored in memory */
+	flush_cache_all();
 
 	/* in this case the modem or watchdog should reboot us */
 	for (;;)

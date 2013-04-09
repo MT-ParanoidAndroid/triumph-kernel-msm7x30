@@ -91,6 +91,7 @@
 #include "devices.h"
 #include "timer.h"
 #include "socinfo.h"
+#include "cpufreq.h"
 #ifdef CONFIG_USB_ANDROID
 #include <linux/usb/android_composite.h>
 #endif
@@ -5039,6 +5040,24 @@ static struct platform_device android_pmem_adsp_device = {
        .name = "android_pmem",
        .id = 2,
        .dev = { .platform_data = &android_pmem_adsp_pdata },
+struct kgsl_cpufreq_voter {
+	int idle;
+	struct msm_cpufreq_voter voter;
+};
+
+static int kgsl_cpufreq_vote(struct msm_cpufreq_voter *v)
+{
+	struct kgsl_cpufreq_voter *kv =
+			container_of(v, struct kgsl_cpufreq_voter, voter);
+
+	return kv->idle ? MSM_CPUFREQ_IDLE : MSM_CPUFREQ_ACTIVE;
+}
+
+static struct kgsl_cpufreq_voter kgsl_cpufreq_voter = {
+	.idle = 1,
+	.voter = {
+		.vote = kgsl_cpufreq_vote,
+	},
 };
 
 struct resource kgsl_3d0_resources[] = {
@@ -5062,14 +5081,17 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 			{
 				.gpu_freq = 245760000,
 				.bus_freq = 192000000,
+				.io_fraction = 0,
 			},
 			{
 				.gpu_freq = 192000000,
 				.bus_freq = 152000000,
+				.io_fraction = 33,
 			},
 			{
 				.gpu_freq = 192000000,
 				.bus_freq = 0,
+				.io_fraction = 100,
 			},
 		},
 		.init_level = 0,
@@ -9442,6 +9464,8 @@ static void __init msm7x30_init(void)
 	fih_battery_driver_init();
 #endif
 /* } Div2-SW2-BSP-FBX-BATT */
+
+	msm_cpufreq_register_voter(&kgsl_cpufreq_voter.voter);
 
 	i2c_register_board_info(0, msm_i2c_board_info,
 			ARRAY_SIZE(msm_i2c_board_info));
