@@ -52,13 +52,6 @@
 #define DPS_DATA_MASK 	0x80
 #define DLS_DATA_MASK 	0x3F
 
-//
-// Norm the return value of the sensor to approximately ~300 for indoor
-// lighting.  It's not perfect but it's all we got and will make CM7 
-// happier.
-//
-#define	LS_MULT	30
-
 
 /* IOCTL */
 #define INACTIVE_PS		0
@@ -96,9 +89,7 @@ struct work_struct psensor_wake;//DIV5-BSP-CH-SF6-SENSOR-PORTING04++
 static int power_use = 0;
 static int ps_active = 0;
 static int ls_active = 0;
-// KD 2011-10-21 Leave "in call" state so sensor works
-// int iPhoneCall = 0;
-int iPhoneCall = 1;
+int iPhoneCall = 0;
 //DIV5-BSP-CH-SF6-SENSOR-PORTING04++[
 #if defined(CONFIG_FIH_PROJECT_SF4Y6)
 int psensor_control_flow = 0;
@@ -186,7 +177,7 @@ int read_light_sensor(void)
 	int val;
 	val= i2c_smbus_read_byte_data(ltr502als->client, DATAREG);
 	DBG(KERN_INFO, "[LTR502ALS] READ_LS value=%d\n", (int)(val & DLS_DATA_MASK));
-	return val >= 0 ? (int)((val & DLS_DATA_MASK) * LS_MULT) : (-1);
+	return val >= 0 ? (int)(val & DLS_DATA_MASK) : (-1);
 }
 EXPORT_SYMBOL(read_light_sensor);
 
@@ -593,7 +584,7 @@ static int ltr502als_ioctl(struct inode *inode, struct file *file, unsigned int 
     void __user *argp = (void __user *)arg;
     int value;
 
-// KD	DBG(KERN_INFO, "[LTR502ALS] cmd(%d)\n", cmd);
+	DBG(KERN_INFO, "[LTR502ALS] cmd(%d)\n", cmd);
 	switch (cmd)
 	{
 		case INIT_CHIP:			
@@ -631,8 +622,8 @@ static int ltr502als_ioctl(struct inode *inode, struct file *file, unsigned int 
 			return (int)(val & DPS_DATA_MASK)>>7;
 		case READ_LS:
 			val= i2c_smbus_read_byte_data(ltr502als->client, DATAREG);
-//			DBG(KERN_INFO, "[LTR502ALS] READ_LS value=%d\n", (int)(val & DLS_DATA_MASK));
-			return (int)((val & DLS_DATA_MASK) * LS_MULT);
+			DBG(KERN_INFO, "[LTR502ALS] READ_LS value=%d\n", (int)(val & DLS_DATA_MASK));
+			return (int)(val & DLS_DATA_MASK);
         case SET_PS_THRESHOLD:
         {                	
 			if(copy_from_user(&value, argp, sizeof(value)))	
@@ -835,11 +826,6 @@ _OWEN_ static void ALSPS_early_suspend_func(struct early_suspend * h)
 	}
 #endif
 //DIV5-BSP-CH-SF6-SENSOR-PORTING04++]
-//
-// KD - Enable interrupts
-//
-	enable_irq(ltr502als->client->irq);
-	enable_irq_wake(ltr502als->client->irq);
 	return;
 }
 _OWEN_ static void ALSPS_late_resume_func(struct early_suspend *h)
@@ -885,11 +871,6 @@ _OWEN_ static void ALSPS_late_resume_func(struct early_suspend *h)
 	}
 	#endif
 	//DIV5-BSP-CH-SF6-SENSOR-PORTING04++]
-//
-// KD Disable interrupts
-//
-	disable_irq(ltr502als->client->irq);
-	disable_irq_wake(ltr502als->client->irq);
 	return;		
 }
 /*static int ltr502als_suspend(struct device *dev)

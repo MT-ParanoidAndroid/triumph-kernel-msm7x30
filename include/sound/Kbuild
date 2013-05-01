@@ -4,6 +4,7 @@ header-y += hdspm.h
 header-y += sfnt_info.h
 header-y += sscape_ioctl.h
 
+header-y += tlv.h
 unifdef-y += asequencer.h
 unifdef-y += asound.h
 unifdef-y += emu10k1.h

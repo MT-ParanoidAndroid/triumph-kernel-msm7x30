@@ -1,6 +1,7 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
    Copyright (C) 2000-2001 Qualcomm Incorporated
+   Copyright (C) 2011 Sony Ericsson Mobile Communications AB
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -399,6 +400,7 @@ static void l2cap_do_start(struct sock *sk)
 
 			l2cap_send_cmd(conn, l2cap_pi(sk)->ident,
 					L2CAP_CONN_REQ, sizeof(req), &req);
+			l2cap_pi(sk)->conf_state |= L2CAP_CONF_CONNECT_REQ_SENT;
 		}
 	} else {
 		struct l2cap_info_req req;
@@ -453,6 +455,7 @@ static void l2cap_conn_start(struct l2cap_conn *conn)
 
 				l2cap_send_cmd(conn, l2cap_pi(sk)->ident,
 					L2CAP_CONN_REQ, sizeof(req), &req);
+				l2cap_pi(sk)->conf_state |= L2CAP_CONF_CONNECT_REQ_SENT;
 			}
 		} else if (sk->sk_state == BT_CONNECT2) {
 			struct l2cap_conn_rsp rsp;
@@ -1906,7 +1909,6 @@ static int l2cap_sock_getsockopt_old(struct socket *sock, int optname, char __us
 			break;
 		}
 
-		memset(&cinfo, 0, sizeof(cinfo));
 		cinfo.hci_handle = l2cap_pi(sk)->conn->hcon->handle;
 		memcpy(cinfo.dev_class, l2cap_pi(sk)->conn->hcon->dev_class, 3);
 
@@ -2438,9 +2440,6 @@ done:
 			memset(&rfc, 0, sizeof(rfc));
 			rfc.mode = pi->mode;
 		}
-
-		if (result == L2CAP_CONF_SUCCESS)
-			pi->conf_state |= L2CAP_CONF_OUTPUT_DONE;
 	}
 	rsp->scid   = cpu_to_le16(pi->dcid);
 	rsp->result = cpu_to_le16(result);
@@ -2691,6 +2690,8 @@ static inline int l2cap_connect_rsp(struct l2cap_conn *conn, struct l2cap_cmd_hd
 			return 0;
 	}
 
+	l2cap_pi(sk)->conf_state &= ~L2CAP_CONF_CONNECT_REQ_SENT;
+
 	switch (result) {
 	case L2CAP_CR_SUCCESS:
 		sk->sk_state = BT_CONFIG;
@@ -2740,7 +2741,7 @@ static inline int l2cap_config_req(struct l2cap_conn *conn, struct l2cap_cmd_hdr
 
 	/* Reject if config buffer is too small. */
 	len = cmd_len - sizeof(*req);
-	if (len < 0 || l2cap_pi(sk)->conf_len + len > sizeof(l2cap_pi(sk)->conf_req)) {
+	if (l2cap_pi(sk)->conf_len + len > sizeof(l2cap_pi(sk)->conf_req)) {
 		l2cap_send_cmd(conn, cmd->ident, L2CAP_CONF_RSP,
 				l2cap_build_conf_rsp(sk, rsp,
 					L2CAP_CONF_REJECT, flags), rsp);
@@ -2833,11 +2834,6 @@ static inline int l2cap_config_rsp(struct l2cap_conn *conn, struct l2cap_cmd_hdr
 		if (l2cap_pi(sk)->num_conf_rsp <= L2CAP_CONF_MAX_CONF_RSP) {
 			int len = cmd->len - sizeof(*rsp);
 			char req[64];
-
-			if (len > sizeof(req) - sizeof(struct l2cap_conf_req)) {
-				l2cap_send_disconn_req(conn, sk);
-				goto done;
-			}
 
 			/* throw out any old stored conf requests */
 			result = L2CAP_CONF_SUCCESS;
@@ -3763,7 +3759,8 @@ static int l2cap_security_cfm(struct hci_conn *hcon, u8 status, u8 encrypt)
 	for (sk = l->head; sk; sk = l2cap_pi(sk)->next_c) {
 		bh_lock_sock(sk);
 
-		if (l2cap_pi(sk)->conf_state & L2CAP_CONF_CONNECT_PEND) {
+		if (l2cap_pi(sk)->conf_state &
+			(L2CAP_CONF_CONNECT_PEND | L2CAP_CONF_CONNECT_REQ_SENT)) {
 			bh_unlock_sock(sk);
 			continue;
 		}
@@ -3785,6 +3782,7 @@ static int l2cap_security_cfm(struct hci_conn *hcon, u8 status, u8 encrypt)
 
 				l2cap_send_cmd(conn, l2cap_pi(sk)->ident,
 					L2CAP_CONN_REQ, sizeof(req), &req);
+				l2cap_pi(sk)->conf_state |= L2CAP_CONF_CONNECT_REQ_SENT;
 			} else {
 				l2cap_sock_clear_timer(sk);
 				l2cap_sock_set_timer(sk, HZ / 10);
@@ -3911,24 +3909,16 @@ static ssize_t l2cap_sysfs_show(struct class *dev, char *buf)
 	struct sock *sk;
 	struct hlist_node *node;
 	char *str = buf;
-	int size = PAGE_SIZE;
 
 	read_lock_bh(&l2cap_sk_list.lock);
 
 	sk_for_each(sk, node, &l2cap_sk_list.head) {
 		struct l2cap_pinfo *pi = l2cap_pi(sk);
-		int len;
 
-		len = snprintf(str, size, "%s %s %d %d 0x%4.4x 0x%4.4x %d %d %d\n",
+		str += sprintf(str, "%s %s %d %d 0x%4.4x 0x%4.4x %d %d %d\n",
 				batostr(&bt_sk(sk)->src), batostr(&bt_sk(sk)->dst),
 				sk->sk_state, __le16_to_cpu(pi->psm), pi->scid,
 				pi->dcid, pi->imtu, pi->omtu, pi->sec_level);
-
-		size -= len;
-		if (size <= 0)
-			break;
-
-		str += len;
 	}
 
 	read_unlock_bh(&l2cap_sk_list.lock);

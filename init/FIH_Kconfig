@@ -273,14 +273,14 @@ if FIH_CONFIG_GROUP
         config FIH_HM0357
             bool "Himax Sensor HM0357 (YUV 0.3M)"
             depends on MSM_CAMERA && FIH_CONFIG_GROUP
-            default y
+            default n
             help
                 FIH Himax 0.3M YUV Sensor
 
         config HM0357_STANDBY
             bool "hm0357 soft standby"
             depends on FIH_HM0357
-            default y
+            default n
             help
                 Himax hm0357 soft standby
 

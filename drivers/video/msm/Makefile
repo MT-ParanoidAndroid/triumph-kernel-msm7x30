@@ -83,6 +83,7 @@ obj-y += mddi_toshiba_wvga_pt.o
 obj-y += mddi_toshiba_wvga.o
 obj-y += mddi_sharp.o
 obj-y += mddi_orise.o
+obj-y += mddi_quickvx.o
 else
 # SW2-6-MM-JH-SF5_Display_Porting-00+
 obj-$(CONFIG_FB_MSM_MDDI_TOSHIBA_FWVGA_PORTRAIT) += mddi_toshiba_fwvga_pt.o
@@ -94,6 +95,7 @@ obj-$(CONFIG_FB_MSM_MDDI_TOSHIBA_WVGA_PORTRAIT) += mddi_toshiba_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MDDI_TOSHIBA_WVGA) += mddi_toshiba_wvga.o
 obj-$(CONFIG_FB_MSM_MDDI_SHARP_QVGA_128x128) += mddi_sharp.o
 obj-$(CONFIG_FB_MSM_MDDI_ORISE) += mddi_orise.o
+obj-$(CONFIG_FB_MSM_MDDI_QUICKVX) += mddi_quickvx.o
 endif
 
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT) += mipi_toshiba_video_wvga_pt.o

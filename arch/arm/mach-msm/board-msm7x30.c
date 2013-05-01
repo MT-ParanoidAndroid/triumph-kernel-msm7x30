@@ -166,6 +166,7 @@
 #define MSM_PMEM_ADSP_SIZE      0x2000000  //SW2-5-CL-Camera-720P-00*
 #define MSM_FLUID_PMEM_ADSP_SIZE	0x2800000
 #define PMEM_KERNEL_EBI1_SIZE   0x600000
+#define MSM_PMEM_AUDIO_SIZE     0x200000
 
 #define PMIC_GPIO_INT		27
 #define PMIC_VREG_WLAN_LEVEL	2900
@@ -1487,7 +1488,7 @@ static struct platform_device msm_camera_sensor_mt9p111 = {
 
 #ifdef CONFIG_FIH_HM0356
 static struct msm_camera_sensor_flash_data flash_hm0356 = {
-    .flash_type = MSM_CAMERA_FLASH_LED,
+	.flash_type = MSM_CAMERA_FLASH_NONE,
     .flash_src  = &msm_flash_src
 };
 //Div6D1-CL-Camera-SensorInfo-01+{
@@ -1534,7 +1535,7 @@ static struct platform_device msm_camera_sensor_hm0356 = {
 //Div2-SW6-MM-HL-Camera-BringUp-00+}
 #ifdef CONFIG_FIH_HM0357
 static struct msm_camera_sensor_flash_data flash_hm0357 = {
-    .flash_type = MSM_CAMERA_FLASH_LED,
+	.flash_type = MSM_CAMERA_FLASH_NONE,
     .flash_src  = &msm_flash_src
 };
 
@@ -1582,7 +1583,7 @@ static struct platform_device msm_camera_sensor_hm0357 = {
 //Div2-SW6-MM-MC-Camera-BringUpForSF5-00+{
 #ifdef CONFIG_FIH_TCM9001MD
 static struct msm_camera_sensor_flash_data flash_tcm9001md = {
-	.flash_type = MSM_CAMERA_FLASH_LED,
+	.flash_type = MSM_CAMERA_FLASH_NONE,
 	.flash_src  = &msm_flash_src
 };
 
@@ -4104,7 +4105,7 @@ static struct i2c_board_info msm_i2c_board_info[] = {
 //Div2-SW2-BSP-Touch, Vincent +
 #ifdef CONFIG_FIH_TOUCHSCREEN_INNOLUX
     {
-        I2C_BOARD_INFO("innolux_ts", 0x00),
+        I2C_BOARD_INFO("innolux_ts", 0x09),
     },
 #endif
 #ifdef CONFIG_FIH_TOUCHSCREEN_BU21018MWV
@@ -5030,6 +5031,12 @@ static struct android_pmem_platform_data android_pmem_adsp_pdata = {
        .cached = 0,
 };
 
+static struct android_pmem_platform_data android_pmem_audio_pdata = {
+       .name = "pmem_audio",
+       .allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
+       .cached = 0,
+};
+
 static struct platform_device android_pmem_kernel_ebi1_device = {
        .name = "android_pmem",
        .id = 1,
@@ -5040,6 +5047,13 @@ static struct platform_device android_pmem_adsp_device = {
        .name = "android_pmem",
        .id = 2,
        .dev = { .platform_data = &android_pmem_adsp_pdata },
+};
+
+static struct platform_device android_pmem_audio_device = {
+       .name = "android_pmem",
+       .id = 4,
+       .dev = { .platform_data = &android_pmem_audio_pdata },
+};
 struct kgsl_cpufreq_voter {
 	int idle;
 	struct msm_cpufreq_voter voter;
@@ -5653,6 +5667,7 @@ static struct mddi_platform_data mddi_pdata = {
 	.mddi_power_save = display_common_power,
 #endif
 	.mddi_sel_clk = msm_fb_mddi_sel_clk,
+	.mddi_client_power = msm_fb_mddi_client_power,
 };
 #endif // CONFIG_FB_MSM_MDDI
 //SW2-6-MM-JH-Display_Flag-00-
@@ -7115,6 +7130,7 @@ static struct platform_device *devices[] __initdata = {
 /* } FIHTDC, Div2-SW2-BSP SungSCLee, HDMI */  
 	&android_pmem_kernel_ebi1_device,
 	&android_pmem_adsp_device,
+	&android_pmem_audio_device,
 	&msm_device_i2c,
 	&msm_device_i2c_2,
 	&msm_device_uart_dm1,
@@ -9609,6 +9625,13 @@ static void __init fluid_pmem_adsp_size_setup(char **p)
 }
 __early_param("fluid_pmem_adsp_size=", fluid_pmem_adsp_size_setup);
 
+static unsigned pmem_audio_size = MSM_PMEM_AUDIO_SIZE;
+static void __init pmem_audio_size_setup(char **p)
+{
+	pmem_audio_size = memparse(*p, p);
+}
+__early_param("pmem_audio_size=", pmem_audio_size_setup);
+
 static unsigned pmem_kernel_ebi1_size = PMEM_KERNEL_EBI1_SIZE;
 static void __init pmem_kernel_ebi1_size_setup(char **p)
 {
@@ -9639,7 +9662,16 @@ static void __init msm7x30_allocate_memory_regions(void)
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
-	
+
+	size = pmem_audio_size;
+	if (size) {
+		addr = alloc_bootmem(size);
+		android_pmem_audio_pdata.start = __pa(addr);
+		android_pmem_audio_pdata.size = size;
+		pr_info("allocating %lu bytes at %p (%lx physical) for audio "
+			"pmem arena\n", size, addr, __pa(addr));
+	}
+
 	size = pmem_kernel_ebi1_size;
 	if (size) {
 		addr = alloc_bootmem_aligned(size, 0x100000);
