@@ -93,6 +93,7 @@ bool mSuspend = false; //Div6-PT2-MM-SL-HS WAKE UP IN SUSPEND-
 enum {
 	NO_DEVICE	= 0,
 	HEADSET	= 1,
+	NOMIC_HEADSET	= 2,//MM-RC-SupportNO_MIC_Hs-00+
 };
 //SW2-6-MM-RC-Modify the HS Detect function for SF5 and SF6-00*{
 
@@ -278,7 +279,8 @@ static void insert_headset(void)
 			H2W_DBG("aud_hs:switch to ext. mic\n ");
 		}
 		//MM-RC-ChangeCodingStyle-00+}
-		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_PWM_TCXO);
+		pmic_hsed_enable(PM_HSED_CONTROLLER_1, PM_HSED_ENABLE_ALWAYS);//MM-SL-PTTIsAbnormalInSuspend-00* /*PM_HSED_ENABLE_PWM_TCXO*/
+
 		H2W_DBG("aud_hs:open mic bias\n ");
 		//#endif //MM-RC-ChangeCodingStyle-00-
 		//SW2-6-MM-RC-Audio_Porting-00+}
@@ -311,7 +313,7 @@ static void insert_headset(void)
 	
         	if(gpio_get_value(AUD_PIN_HOOK_BTN)==1)
         	{
-            		switch_set_state(&hi->sdev, HEADSET);
+            		//switch_set_state(&hi->sdev, HEADSET);//MM-RC-SupportNO_MIC_Hs-00-
             		#ifdef AUD_HOOK_BTN 
             		set_irq_type(hi->irq_btn, IRQF_TRIGGER_LOW );
             		#endif 
@@ -319,6 +321,7 @@ static void insert_headset(void)
 			msleep(500);
 			if(gpio_get_value(AUD_PIN_HOOK_BTN)==1)
 			{
+				switch_set_state(&hi->sdev, NOMIC_HEADSET);//MM-RC-SupportNO_MIC_Hs-00+
        			//SW2-6-MM-RC-Audio_Porting-00+{
        			//In7x30 3 rings, ext. mic bias must be disabled  here for power saving purpose
        			//#ifdef CONFIG_FIH_PROJECT_SFX  //MM-RC-ChangeCodingStyle-00-
@@ -331,6 +334,7 @@ static void insert_headset(void)
         		}
 			else
 			{
+				switch_set_state(&hi->sdev, HEADSET);//MM-RC-SupportNO_MIC_Hs-00+
 				H2W_DBG("aud_hs:HEADSET is plugging\n ");
 			}
         	}
@@ -411,7 +415,7 @@ static void detection_work(struct work_struct *work)
         
 	if (gpio_get_value(AUD_PIN_HEADSET_DET) != HS_PLUG_IN) {
 		/* Headset not plugged in */
-		if (switch_get_state(&hi->sdev) == HEADSET)
+		if ((switch_get_state(&hi->sdev) == HEADSET)||(switch_get_state(&hi->sdev) == NOMIC_HEADSET))//MM-RC-SupportNO_MIC_Hs-00*
 		{
 			H2W_DBG("Headset is plugged out.\n");
 			remove_headset();
@@ -489,7 +493,7 @@ static irqreturn_t detect_irq_handler(int irq, void *dev_id)
     * then we can do headset_insertion check.
 	*/
 	if ((switch_get_state(&hi->sdev) == NO_DEVICE) ^ (value2^HS_PLUG_IN)) {//SW2-6-MM-RC-Audio_Porting-00*
-		if (switch_get_state(&hi->sdev) == HEADSET)          
+		if (switch_get_state(&hi->sdev) == HEADSET)      
 			hi->ignore_btn = 1;
 		/* Do the rest of the work in timer context */
 		hrtimer_start(&hi->timer, hi->debounce_time, HRTIMER_MODE_REL);
@@ -558,6 +562,8 @@ void headset_late_resume(struct early_suspend *h)
 //Div6-PT2-MM-SL-HS WAKE UP IN SUSPEND-00+}
 #endif
 //MM-SL-CurrentIsTooLargeInSuspend-00-}
+
+
 
 static int trout_h2w_probe(struct platform_device *pdev)
 {

@@ -22,9 +22,9 @@ struct sf8_kybd_data {
     struct input_dev    *sf8_kybd_idev;
     struct device       *sf8_kybd_pdev;
     
-    struct work_struct qkybd_volup;
-    struct work_struct qkybd_voldn;
-    struct work_struct qkybd_coverdet;    
+    struct work_struct 	qkybd_volup;
+    struct work_struct 	qkybd_voldn;
+	struct delayed_work	qkybd_coverdet;
 
     unsigned int pmic_gpio_vol_up;
     unsigned int pmic_gpio_vol_dn;
@@ -50,7 +50,7 @@ static irqreturn_t sf8_kybd_irqhandler(int irq, void *dev_id)
 			schedule_work(&kbdrec->qkybd_voldn);
 		}
 		else if (PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, kbdrec->pmic_gpio_cover_det) == irq) {
-			schedule_work(&kbdrec->qkybd_coverdet);
+			schedule_delayed_work(&kbdrec->qkybd_coverdet, 0);
 		}
 	}  
 	return IRQ_HANDLED;
@@ -60,6 +60,7 @@ static int sf8_kybd_irqsetup(void)
 {
     int rc;
     
+	//Setting volume up irq
     rc = request_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_vol_up), &sf8_kybd_irqhandler,
                  (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING), 
                  sf8_kybd_name, rd);
@@ -70,6 +71,7 @@ static int sf8_kybd_irqsetup(void)
         rc = -EIO;
     }
     
+	//Setting volume down irq
     rc = request_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_vol_dn), &sf8_kybd_irqhandler,
                  (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING), 
                  sf8_kybd_name, rd);
@@ -80,6 +82,7 @@ static int sf8_kybd_irqsetup(void)
         rc = -EIO;
     }
 
+	//Setting cover detect irq
     rc = request_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_cover_det), &sf8_kybd_irqhandler,
                  (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING), 
                  sf8_kybd_name, rd);
@@ -89,6 +92,15 @@ static int sf8_kybd_irqsetup(void)
                "(rc = %d)\n", sf8_kybd_name, rd->pmic_gpio_cover_det, rc);
         rc = -EIO;
     }    
+
+	//Setting cover detect irq wake
+	rc = enable_irq_wake(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_cover_det));
+    if (rc < 0) {
+        dev_err(rd->sf8_kybd_pdev,
+               "cover detect key enable_irq_wake failed rc = %d\n", rc);
+        rc = -EIO;
+    }    
+
     return rc;
 }
 
@@ -103,8 +115,7 @@ static int sf8_kybd_config_gpio(void)
 {
     struct pm8058_gpio button_configuration = {
         .direction      = PM_GPIO_DIR_IN,
-        //.pull           = PM_GPIO_PULL_NO,
-        .pull           = PM_GPIO_PULL_UP_31P5,
+        .pull           = PM_GPIO_PULL_UP_31P5, 
         .vin_sel        = 2,
         .out_strength   = PM_GPIO_STRENGTH_NO,
         .function       = PM_GPIO_FUNC_NORMAL,
@@ -113,9 +124,8 @@ static int sf8_kybd_config_gpio(void)
 
     int rc = 0;
 
-    printk(KERN_INFO "%s set pull up\n ", __func__);
-
-    rc = pm8058_gpio_config(rd->pmic_gpio_vol_up, &button_configuration);
+	//Config volume up gpio
+	rc = pm8058_gpio_config(rd->pmic_gpio_vol_up, &button_configuration);
     if (rc < 0) {
         dev_err(rd->sf8_kybd_pdev, "%s: gpio %d configured failed\n", __func__, rd->pmic_gpio_vol_up);
         return rc;
@@ -133,6 +143,7 @@ static int sf8_kybd_config_gpio(void)
         }
     }
     
+	//Config volume down gpio
     rc = pm8058_gpio_config(rd->pmic_gpio_vol_dn, &button_configuration);
     if (rc < 0) {
         dev_err(rd->sf8_kybd_pdev, "%s: gpio %d configured failed\n", __func__, rd->pmic_gpio_vol_dn);
@@ -151,7 +162,8 @@ static int sf8_kybd_config_gpio(void)
         }
     }
 
-    rc = pm8058_gpio_config(rd->pmic_gpio_cover_det, &button_configuration);
+	//Config cover detect gpio
+	rc = pm8058_gpio_config(rd->pmic_gpio_cover_det, &button_configuration);
     if (rc < 0) {
         dev_err(rd->sf8_kybd_pdev, "%s: gpio %d configured failed\n", __func__, rd->pmic_gpio_cover_det);
         return rc;
@@ -173,18 +185,18 @@ static int sf8_kybd_config_gpio(void)
 
 static void sf8_kybd_volup(struct work_struct *work)
 {
-    struct sf8_kybd_data *kbdrec  = container_of(work, struct sf8_kybd_data, qkybd_volup);
+    struct sf8_kybd_data *kbdrec	= container_of(work, struct sf8_kybd_data, qkybd_volup);
     struct input_dev *idev          = kbdrec->sf8_kybd_idev;
-    bool gpio_val                   = (bool)gpio_get_value(kbdrec->sys_gpio_vol_up);
+    bool gpio_val                   = (bool)gpio_get_value_cansleep(kbdrec->sys_gpio_vol_up);
     
     dev_dbg(kbdrec->sf8_kybd_pdev, "%s: Key VOLUMEUP (%d) %s\n", __func__, KEY_VOLUMEUP, !gpio_val ? "was RELEASED" : "is PRESSING");
 
     if (gpio_val) {
         input_report_key(idev, KEY_VOLUMEUP, KEYRELEASE); 
-		printk("V_Up key release\n");						
+		dev_info(rd->sf8_kybd_pdev, "%s: V_Up key release.\n", __func__);
     } else {
         input_report_key(idev, KEY_VOLUMEUP, KEYPRESS);
-		printk("V_Up key press\n");								
+		dev_info(rd->sf8_kybd_pdev, "%s: V_Up key press.\n", __func__);
     }
  
     input_sync(idev);
@@ -192,18 +204,18 @@ static void sf8_kybd_volup(struct work_struct *work)
 
 static void sf8_kybd_voldn(struct work_struct *work)
 {
-    struct sf8_kybd_data *kbdrec  = container_of(work, struct sf8_kybd_data, qkybd_voldn);
+    struct sf8_kybd_data *kbdrec	= container_of(work, struct sf8_kybd_data, qkybd_voldn);
     struct input_dev *idev          = kbdrec->sf8_kybd_idev;
-    bool gpio_val                   = (bool)gpio_get_value(kbdrec->sys_gpio_vol_dn);
+    bool gpio_val                   = (bool)gpio_get_value_cansleep(kbdrec->sys_gpio_vol_dn);
     
     dev_dbg(kbdrec->sf8_kybd_pdev, "%s: Key VOLUMEDOWN (%d) %s\n", __func__, KEY_VOLUMEDOWN, !gpio_val ? "was RELEASED" : "is PRESSING");
 
     if (gpio_val) {
         input_report_key(idev, KEY_VOLUMEDOWN, KEYRELEASE); 
-		printk("V_Dn key release\n");				
+		dev_info(rd->sf8_kybd_pdev, "%s: V_Dn key release.\n", __func__);
     } else {
         input_report_key(idev, KEY_VOLUMEDOWN, KEYPRESS);
-		printk("V_Dn key press\n");						
+		dev_info(rd->sf8_kybd_pdev, "%s: V_Dn key press.\n", __func__);		
     }
  
     input_sync(idev);
@@ -211,39 +223,36 @@ static void sf8_kybd_voldn(struct work_struct *work)
 
 static void sf8_kybd_coverdet(struct work_struct *work)
 {
-    struct sf8_kybd_data *kbdrec  = container_of(work, struct sf8_kybd_data, qkybd_coverdet);
+	struct sf8_kybd_data *kbdrec  = container_of(work, struct sf8_kybd_data, qkybd_coverdet.work);
     struct input_dev *idev        = kbdrec->sf8_kybd_idev;
-    bool gpio_val                 = (bool)gpio_get_value(kbdrec->sys_gpio_cover_det);
+    bool gpio_val                 = (bool)gpio_get_value_cansleep(kbdrec->sys_gpio_cover_det);
     
     dev_dbg(kbdrec->sf8_kybd_pdev, "%s: Key COVER DETECT (%d) %s\n", __func__, KEY_COVERDET, !gpio_val ? "was RELEASED" : "is PRESSING");
 
-    if (gpio_val)
-	{
+    if (gpio_val) {
+		
+        input_report_key(idev, KEY_COVERDET, KEYPRESS);		
 		input_report_key(idev, KEY_COVERDET, KEYRELEASE); 
-		printk("Cover detect key release in SF8 %d phase.\n", fih_get_product_phase());
-		if (fih_get_product_phase()==Product_PR1 || fih_get_product_phase()==Product_PR1p5)
-		{
-			#ifdef CONFIG_KEYBOARD_SF4H8_COVERDET
-	 		printk("Cover detect key release then execute emergency_restart.\n");			
-	 		emergency_restart();
-			#endif
-		}
-		else
-		{
-		 	printk("Cover detect key release then execute shutdown.\n");				
-		}
-    } 
-	else 
-    {
-        input_report_key(idev, KEY_COVERDET, KEYPRESS);
-	 	printk("Cover detect key press\n");						
+
+		dev_info(rd->sf8_kybd_pdev, "%s: Cover detect key release then execute shutdown.\n", __func__);
+		input_sync(idev);
+		
+    } else {
+		dev_info(rd->sf8_kybd_pdev, "%s: Cover detect key press.\n", __func__);
     }
- 
-    input_sync(idev);
+    
 }
 
 static void sf8_kybd_free_irq(void)
 {
+    int rc;
+
+	rc = disable_irq_wake(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_cover_det));
+    if (rc < 0) {
+        dev_err(rd->sf8_kybd_pdev,
+               "cover detect key disable_irq_wake failed rc = %d\n", rc);
+    }   
+		
     free_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_vol_up), rd);
     free_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_vol_dn), rd);
     free_irq(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_cover_det), rd);    
@@ -253,7 +262,7 @@ static void sf8_kybd_flush_work(void)
 {
     flush_work(&rd->qkybd_volup);
     flush_work(&rd->qkybd_voldn);
-    flush_work(&rd->qkybd_coverdet);    
+	cancel_delayed_work_sync(&rd->qkybd_coverdet);
 }
 
 static int sf8_kybd_opencb(struct input_dev *dev)
@@ -315,7 +324,7 @@ static int sf8_kybd_remove(struct platform_device *pdev)
 
     if (rd->kybd_connected) {
         rd->kybd_connected = 0;
-        
+	
         sf8_kybd_free_irq();
         sf8_kybd_flush_work();
     }
@@ -329,10 +338,7 @@ static int sf8_kybd_remove(struct platform_device *pdev)
 
 static int sf8_kybd_suspend(struct platform_device *pdev, pm_message_t state)
 {
-
-	printk(KERN_INFO "%s cover detect key enable_irq_wake.\n",  __func__);
-	enable_irq_wake(PM8058_GPIO_IRQ(PMIC8058_IRQ_BASE, rd->pmic_gpio_cover_det));
-		
+	printk(KERN_INFO "%s\n", __func__);
 	return 0;
 }
 
@@ -345,6 +351,7 @@ static int sf8_kybd_probe(struct platform_device *pdev)
 {
 	struct sf8_kybd_platform_data *setup_data = pdev->dev.platform_data;
 	int rc = -ENOMEM;
+	bool gpio_val;	
 	
 	rd = kzalloc(sizeof(struct sf8_kybd_data), GFP_KERNEL);
 	if (!rd) {
@@ -363,27 +370,41 @@ static int sf8_kybd_probe(struct platform_device *pdev)
 		
     rc = sf8_kybd_config_gpio();
     if (rc) {
+        dev_err(&pdev->dev,
+               "%s: GPIOs configured FAILED!!\n", __func__);
         goto failexit1;
-    } else {
-        dev_info(&pdev->dev,
-               "%s: GPIOs configured SUCCESSFULLY!!\n", __func__);
     }
 
     //Initialize WORKs
     INIT_WORK(&rd->qkybd_volup, sf8_kybd_volup);
     INIT_WORK(&rd->qkybd_voldn, sf8_kybd_voldn);
-    INIT_WORK(&rd->qkybd_coverdet, sf8_kybd_coverdet);
+	INIT_DELAYED_WORK(&rd->qkybd_coverdet, sf8_kybd_coverdet);	
     	
     //Request IRQs
     rc = sf8_kybd_irqsetup();
-    if (rc)  
+    if (rc) {
+        dev_err(&pdev->dev,
+               "%s: IRQ setup FAILED!!\n", __func__);
         goto failexit2;
+    }		
 
     //Register Input Device to Input Subsystem
     sf8_kybd_connect2inputsys();
-    if (rd->sf8_kybd_idev == NULL)
-        goto failexit2;
-    
+    if (rd->sf8_kybd_idev == NULL) {
+        dev_err(&pdev->dev,
+               "%s: Register input device FAILED!!\n", __func__);
+        goto failexit2;    
+    }
+	
+	//Get cover detect key gpio value
+	gpio_val = (bool)gpio_get_value_cansleep(rd->sys_gpio_cover_det);
+    dev_info(&pdev->dev, "Cover detect key gpio value: %d.\n", gpio_val);	
+	
+	#ifdef CONFIG_KEYBOARD_SF4H8_COVERDET
+	//Schedule delay work for check cover detect key state.
+	schedule_delayed_work(&rd->qkybd_coverdet, msecs_to_jiffies(30000));
+	#endif
+
     return 0;
 
 failexit2:

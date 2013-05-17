@@ -15,7 +15,7 @@
 //#include <linux/bu21018mwv_fw1.h>
 #include "../../../arch/arm/mach-msm/smd_private.h"
 #include "../../../arch/arm/mach-msm/proc_comm.h"
-#include <linux/slab.h>	// temp for BSP 4040
+
 //
 extern unsigned int fih_get_product_id(void);
 extern unsigned int fih_get_product_phase(void);
@@ -350,9 +350,9 @@ static int innolux_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	set_bit(EV_ABS, touch_input->evbit);
 	set_bit(EV_SYN, touch_input->evbit);
 	
-	t_max_x = 480;//479;
+	t_max_x = 479;
 	t_min_x = 0;
-	t_max_y = 800;//799;
+	t_max_y = 799;
 	t_min_y = 0;
 	
 #ifdef CONFIG_FIH_FTM

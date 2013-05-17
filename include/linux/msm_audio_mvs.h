@@ -36,14 +36,22 @@
 	(AUDIO_MAX_COMMON_IOCTL_NUM + 1), unsigned)
 
 /* MVS modes */
-#define MVS_MODE_IS127 2
-#define MVS_MODE_AMR 5
-#define MVS_MODE_LINEAR_PCM 9
-#define MVS_MODE_PCM 12
-#define MVS_MODE_AMR_WB 13
-//SW5-MM-DL-Add2030MvsWithG711-00+{
-#define MVS_MODE_G711 10
-//SW5-MM-DL-Add2030MvsWithG711-00+}
+#define MVS_MODE_IS733 0x1
+#define MVS_MODE_IS127 0x2
+#define MVS_MODE_4GV_NB 0x3
+#define MVS_MODE_4GV_WB 0x4
+#define MVS_MODE_AMR 0x5
+#define MVS_MODE_EFR 0x6
+#define MVS_MODE_FR 0x7
+#define MVS_MODE_HR 0x8
+#define MVS_MODE_LINEAR_PCM 0x9
+#define MVS_MODE_G711 0xA
+#define MVS_MODE_PCM 0xC
+#define MVS_MODE_AMR_WB 0xD
+#define MVS_MODE_G729A 0xE
+#define MVS_MODE_G711A 0xF
+#define MVS_MODE_G722 0x10
+#define MVS_MODE_PCM_WB 0x80000000
 
 enum msm_audio_amr_mode {
 	MVS_AMR_MODE_0475, /* AMR 4.75 kbps */
@@ -86,12 +94,64 @@ enum msm_audio_amr_frame_type {
 	MVS_AMR_SPEECH_LOST	      /* Downlink speech lost           */
 };
 
+enum msm_audio_g711a_mode {
+	MVS_G711A_MODE_MULAW,
+	MVS_G711A_MODE_ALAW
+};
+
+enum mvs_g722_mode_type {
+	MVS_G722_MODE_01,
+	MVS_G722_MODE_02,
+	MVS_G722_MODE_03,
+	MVS_G722_MODE_MAX,
+	MVS_G722_MODE_UNDEF
+};
+
+enum msm_audio_g711a_frame_type {
+	MVS_G711A_SPEECH_GOOD,
+	MVS_G711A_SID,
+	MVS_G711A_NO_DATA,
+	MVS_G711A_ERASURE
+};
+
+enum msm_audio_g729a_frame_type {
+	MVS_G729A_NO_DATA,
+	MVS_G729A_SPEECH_GOOD,
+	MVS_G729A_SID,
+	MVS_G729A_ERASURE
+};
+
+struct min_max_rate {
+	uint32_t min_rate;
+	uint32_t max_rate;
+};
+
 struct msm_audio_mvs_config {
 	uint32_t mvs_mode;
 	uint32_t rate_type;
+	struct min_max_rate min_max_rate;
+	uint32_t dtx_mode;
 };
 
-#define MVS_MAX_VOC_PKT_SIZE 320
+#define MVS_MAX_VOC_PKT_SIZE 640
+
+struct gsm_header {
+	uint8_t bfi;
+	uint8_t sid;
+	uint8_t taf;
+	uint8_t ufi;
+};
+
+struct q6_msm_audio_mvs_frame {
+	union {
+	uint32_t frame_type;
+	uint32_t packet_rate;
+	struct gsm_header gsm_frame_type;
+	} header;
+	uint32_t len;
+	uint8_t voc_pkt[MVS_MAX_VOC_PKT_SIZE];
+
+};
 
 struct msm_audio_mvs_frame {
 	uint32_t frame_type;
@@ -100,4 +160,12 @@ struct msm_audio_mvs_frame {
 
 };
 
+#define Q5V2_MVS_MAX_VOC_PKT_SIZE 320
+
+struct q5v2_msm_audio_mvs_frame {
+	uint32_t frame_type;
+	uint32_t len;
+	uint8_t voc_pkt[Q5V2_MVS_MAX_VOC_PKT_SIZE];
+
+};
 #endif /* __MSM_AUDIO_MVS_H */
