@@ -191,42 +191,47 @@ static void bi041p_isr_workqueue(struct work_struct *work)
                 input_report_abs(bi041p.input, ABS_Y, abs(1088 - YCORD1(buffer)));
                 input_report_abs(bi041p.input, ABS_PRESSURE, 255);
                 input_report_key(bi041p.input, BTN_TOUCH, 1);
+				input_mt_sync(bi041p.input);
             } else {
                 input_report_abs(bi041p.input, ABS_PRESSURE, 0);
                 input_report_key(bi041p.input, BTN_TOUCH, 0);
+				input_mt_sync(bi041p.input);
+				input_sync(bi041p.input);
             }
 #else
 			if (cnt) {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 255);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 255);
-		input_report_key(bi041p.input, BTN_TOUCH, 1);
+                input_report_abs(bi041p.input, ABS_PRESSURE, 255);
+				input_report_key(bi041p.input, BTN_TOUCH, 1);
 				input_report_abs(bi041p.input, ABS_MT_POSITION_X, XCORD1(buffer));
 				input_report_abs(bi041p.input, ABS_MT_POSITION_Y, abs(1088 - YCORD1(buffer)));
 				input_mt_sync(bi041p.input);
 			} else {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 0);
-		input_report_key(bi041p.input, BTN_TOUCH, 0);
+				input_report_abs(bi041p.input, ABS_PRESSURE, 0);
+				input_report_key(bi041p.input, BTN_TOUCH, 0);
 				input_report_abs(bi041p.input, ABS_MT_POSITION_X, XCORD1(buffer));
 				input_report_abs(bi041p.input, ABS_MT_POSITION_Y, abs(1088 - YCORD1(buffer)));
 				input_mt_sync(bi041p.input);
+				input_sync(bi041p.input);
 			}
 			if (cnt > 1) {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 255);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 255);
-		input_report_key(bi041p.input, BTN_TOUCH, 1);
+                input_report_abs(bi041p.input, ABS_PRESSURE, 255);
+				input_report_key(bi041p.input, BTN_TOUCH, 1);
 				input_report_abs(bi041p.input, ABS_MT_POSITION_X, XCORD2(buffer));
 				input_report_abs(bi041p.input, ABS_MT_POSITION_Y, abs(1088 - YCORD2(buffer)));
 				input_mt_sync(bi041p.input);
                 bTouch2 = 1;
             } else if (bTouch2) {        // Second touch released
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 0);
-		input_report_key(bi041p.input, BTN_TOUCH, 0);
+				input_report_abs(bi041p.input, ABS_PRESSURE, 0);
+				input_report_key(bi041p.input, BTN_TOUCH, 0);
 				input_report_abs(bi041p.input, ABS_MT_POSITION_X, XCORD2(buffer));
 				input_report_abs(bi041p.input, ABS_MT_POSITION_Y, abs(1088 - YCORD2(buffer)));
 				input_mt_sync(bi041p.input);
                 bTouch2 = 0;
+				input_sync(bi041p.input);
 			}
 #endif
             if (!cnt)
@@ -284,8 +289,6 @@ static void bi041p_isr_workqueue(struct work_struct *work)
             if (!bIsPenUp)
             {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 0);
-		input_report_key(bi041p.input, BTN_TOUCH, 0);
 				input_mt_sync(bi041p.input);
                 bIsPenUp = 1;
             }
@@ -306,8 +309,6 @@ static void bi041p_isr_workqueue(struct work_struct *work)
             if (!bIsPenUp)
             {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 0);
-		input_report_key(bi041p.input, BTN_TOUCH, 0);
 				input_mt_sync(bi041p.input);
                 bIsPenUp = 1;
             }
@@ -328,8 +329,6 @@ static void bi041p_isr_workqueue(struct work_struct *work)
             if (!bIsPenUp)
             {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 0);
-		input_report_key(bi041p.input, BTN_TOUCH, 0);
 				input_mt_sync(bi041p.input);
                 bIsPenUp = 1;
             }
@@ -355,8 +354,6 @@ static void bi041p_isr_workqueue(struct work_struct *work)
             if (!bIsPenUp)
             {
 				input_report_abs(bi041p.input, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(bi041p.input, ABS_MT_PRESSURE, 0);
-		input_report_key(bi041p.input, BTN_TOUCH, 0);
 				input_mt_sync(bi041p.input);
                 bIsPenUp = 1;
             }
@@ -943,13 +940,6 @@ static int bi041p_probe(struct i2c_client *client, const struct i2c_device_id *i
 	set_bit(EV_ABS, bi041p.input->evbit);
 	set_bit(EV_SYN, bi041p.input->evbit);
 	set_bit(BTN_TOUCH, bi041p.input->keybit);
-        clear_bit(EV_REP, bi041p.input->keybit);
-        clear_bit(EV_SW, bi041p.input->keybit);
-        clear_bit(EV_LED, bi041p.input->keybit);
-        clear_bit(EV_SND, bi041p.input->keybit);
-        clear_bit(EV_FF, bi041p.input->keybit);
-        clear_bit(EV_FF_STATUS, bi041p.input->keybit);
-        clear_bit(EV_PWR, bi041p.input->keybit);
     set_bit(KEY_BACK, bi041p.input->keybit);
 	set_bit(KEY_MENU, bi041p.input->keybit);
     set_bit(KEY_HOME, bi041p.input->keybit);
@@ -958,10 +948,10 @@ static int bi041p_probe(struct i2c_client *client, const struct i2c_device_id *i
 #ifdef CONFIG_FIH_FTM
 	input_set_abs_params(bi041p.input, ABS_X, TS_MIN_X, TS_MAX_X, 0, 0);
 	input_set_abs_params(bi041p.input, ABS_Y, TS_MIN_Y, TS_MAX_Y, 0, 0);
-	input_set_abs_params(bi041p.input, ABS_MT_PRESSURE, 0, 255, 0, 0);
+	input_set_abs_params(bi041p.input, ABS_PRESSURE, 0, 255, 0, 0);
 #else
     input_set_abs_params(bi041p.input, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
-    input_set_abs_params(bi041p.input, ABS_MT_PRESSURE, 0, 255, 0, 0);
+	input_set_abs_params(bi041p.input, ABS_PRESSURE, 0, 255, 0, 0);
     input_set_abs_params(bi041p.input, ABS_MT_POSITION_X, TS_MIN_X, TS_MAX_X, 0, 0);
     input_set_abs_params(bi041p.input, ABS_MT_POSITION_Y, TS_MIN_Y, TS_MAX_Y, 0, 0);
 #endif
