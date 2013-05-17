@@ -5040,6 +5040,8 @@ static struct platform_device android_pmem_adsp_device = {
        .name = "android_pmem",
        .id = 2,
        .dev = { .platform_data = &android_pmem_adsp_pdata },
+};
+
 struct kgsl_cpufreq_voter {
 	int idle;
 	struct msm_cpufreq_voter voter;
